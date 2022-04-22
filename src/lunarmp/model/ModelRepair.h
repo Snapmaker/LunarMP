@@ -14,7 +14,6 @@
 #include <CGAL/Polygon_mesh_processing/orientation.h>
 #include <CGAL/IO/polygon_soup_io.h>
 
-#include "../utils/logoutput.h"
 #include "ModelBase.h"
 
 #include <iostream>
@@ -31,38 +30,55 @@ class ModelRepair {
     int max_num_hole_edges = -1;    //! Lower limit of the number of edges for filling holes
 
     bool use_delaunay_triangulation = true;     //! If true, use the Delaunay triangulation facet search space.
-    //! If no valid triangulation can be found in this search space,
-    //! the algorithm falls back to the non-Delaunay triangulations
-    //! search space to find a solution.
-    //!  Default: true
+                                                //! If no valid triangulation can be found in this search space,
+                                                //! the algorithm falls back to the non-Delaunay triangulations
+                                                //! search space to find a solution.
+                                                //!  Default: true
 
     bool use_2d_constrained_delaunay_triangulation = true;      //! If true, the points of the boundary of the hole are
-    //! used to estimate a fitting plane and a 2D constrained
-    //! Delaunay triangulation is then used to fill the hole
-    //! projected in the fitting plane.
-    //!  Default: true
+                                                                //! used to estimate a fitting plane and a 2D constrained
+                                                                //! Delaunay triangulation is then used to fill the hole
+                                                                //! projected in the fitting plane.
+                                                                //!  Default: true
 
     K::FT threshold_distance = K::FT(-1);       //! The maximum distance between the vertices of the hole boundary and
-    //! the least squares plane fitted to this boundary.
-    //! This parameter is used only in conjunction with use_2d_constrained_delaunay_triangulation.
+                                                //! the least squares plane fitted to this boundary.
+                                                //! This parameter is used only in conjunction with use_2d_constrained_delaunay_triangulation.
 
-    double density_control_factor = K::FT(sqrt(2));      //! factor to control density of the ouput mesh, where larger values
-    //! cause denser refinements
+    double density_control_factor = K::FT(sqrt(2));      //! factor to control density of the output mesh, where larger values
+                                                         //! cause denser refinements
 
-    int fairing_continuity = 1;     //! A value controling the tangential continuity of the output surface patch.
-    //! The possible values are 0, 1 and 2, refering to the C0, C1 and C2 continuity.
+    int fairing_continuity = 1;     //! A value control the tangential continuity of the output surface patch.
+                                    //! The possible values are 0, 1 and 2, refer to the C0, C1 and C2 continuity.
 
     int least_faces_per_component = 2; //! A component need to have at least faces.
+
 
   public:
 
     int non_manifold_edge = 0;               //! Numbers of non-manifold_edge
     int non_manifold_vertex = 0;             //! non-manifold vertex
     int duplicated_vertex = 0;               //! Numbers of duplicated vertex
-    int vertex_id_in_polygon_replaced = 0;   //! Numbers of vertex_id in polygon_ replaced
+    int vertex_id_in_polygon_replaced = 0;   //! Numbers of vertex_id in polygon replaced
     int polygon_orientation_reversed = 0;    //! Numbers of polygon orientation reversed
+    int number_of_connected_components = 0;  //! Number of connected components
+    int number_of_holes = 0;                 //! Number of holes
+    int number_of_intersections = 0;         //! Number of intersections
 
-//    ModelRepair() {};
+    bool is_outward_mesh = false; //! A closed triangle mesh has a positive orientation.
+    bool is_intersecting = false; //! A triangulated surface mesh self-intersects.
+    bool is_producing_self_intersecting = false; //! Number of intersections between a subset of faces of a triangulated surface mesh.
+
+    CGAL::Timer t;
+    double check_time = 0;                      //! The time spent inspecting the model.
+    double repair_time = 0;                     //! Total model repair time taken
+    double repair_basic_time = 0;               //! Time spent on base repairs
+    double repair_manifoldness_time = 0;        //! Time spent on manifold vertices & edges repairs
+    double repair_borders_time = 0;             //! Time spent on borders repairs
+    double repair_holes_time = 0;               //! Time spent on holes repairs
+    double repair_self_intersect_time = 0;      //! Time spent on self intersecting triangular plane repairs
+    double read_file_time = 0;                  //! Time spent on file to read
+
     /*!
      * \brief Read model file as polygon soup, support off/obj/stl/ply/ts/vtp file
      *
@@ -127,7 +143,7 @@ class ModelRepair {
     /*!
      * \brief Determine whether there are holes in the mesh.
      */
-    bool isHoleMesh(triangular_Mesh& mesh);
+    bool isHoleMesh(triangular_Mesh mesh);
 
     /*!
      * \brief Repair each hole step by step.
@@ -173,11 +189,41 @@ class ModelRepair {
      * \brief Model repair interface.
      */
     void repairModel(std::string input_file, std::string output_file);
+    triangular_Mesh repairModelMesh(std::string input_file, std::string output_file);
+    triangular_Mesh repairModelMesh(std::string input_file);
+
 
     /*!
      * \brief Test interface.
      */
     void test();
+
+    /*!
+     * \brief Check the number of components in the model.
+     */
+    void checkConnectedComponents(triangular_Mesh mesh);
+
+    /*!
+     * \brief Determine whether there are holes in the mesh.
+     */
+    void checkHoles(triangular_Mesh mesh);
+
+    /*!
+     * \brief Determine whether the mesh is self-intersecting.
+     */
+    void checkIntersect(triangular_Mesh mesh);
+
+    /*!
+     * \brief Check the model for errors.
+     */
+    void checkModel(std::string input_file);
+
+    /*!
+     * \brief Test interface.
+     */
+    void checkTest1();
+
+    bool checkTest(std::string file_name);
 };
 }
 

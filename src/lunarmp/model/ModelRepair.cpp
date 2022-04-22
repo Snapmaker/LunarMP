@@ -17,12 +17,12 @@ bool ModelRepair::readPolygonSoup(std::string file_name, std::vector<K::Point_3>
     return EXIT_SUCCESS;
 }
 
-void ModelRepair::writePolygon(std::string file_name, triangular_Mesh& mesh) {
+void ModelRepair::writePolygon(std::string file_name, Mesh& mesh) {
     log("Writing file.\n");
     CGAL::IO::write_polygon_mesh(file_name, mesh, NP::stream_precision(17));
 }
 
-void ModelRepair::isOutwardMesh(triangular_Mesh& mesh) {
+void ModelRepair::isOutwardMesh(Mesh& mesh) {
     if (PMP::is_outward_oriented(mesh)) {
         log("Mesh is outward.\n");
     } else {
@@ -48,7 +48,7 @@ bool ModelRepair::orientPolygon(std::vector<K::Point_3>& points, std::vector<std
     return is_producing_self_intersecting;
 }
 
-void ModelRepair::repairPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, triangular_Mesh& mesh) {
+void ModelRepair::repairPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh) {
     log("Start repairing polygon soup.\n");
     log("Before reparation, the soup has %d vertices and %d faces.\n", points.size(), polygons.size());
     PMP::repair_polygon_soup(points,
@@ -71,7 +71,7 @@ void ModelRepair::repairPolygon(std::vector<K::Point_3>& points, std::vector<std
     }
 }
 
-void ModelRepair::repair_manifoldness(triangular_Mesh& mesh)
+void ModelRepair::repair_manifoldness(Mesh& mesh)
 {
     const double bound = std::cos(0.75 * CGAL_PI);
     std::vector<face_descriptor> cc;
@@ -79,16 +79,16 @@ void ModelRepair::repair_manifoldness(triangular_Mesh& mesh)
     PMP::connected_component(fd, mesh, std::back_inserter(cc));
 
     // Instead of writing the faces into a container, you can set a face property to true
-    typedef triangular_Mesh::Property_map<face_descriptor, bool> F_select_map;
+    typedef Mesh::Property_map<face_descriptor, bool> F_select_map;
     F_select_map fselect_map = mesh.add_property_map<face_descriptor, bool>("f:select", false).first;
 
     PMP::connected_component(fd, mesh,
                              boost::make_function_output_iterator(Put_true<F_select_map>(fselect_map)));
 
-    triangular_Mesh::Property_map<face_descriptor, std::size_t> fccmap =
+    Mesh::Property_map<face_descriptor, std::size_t> fccmap =
         mesh.add_property_map<face_descriptor, std::size_t>("f:CC").first;
     std::size_t num = PMP::connected_components(mesh, fccmap,
-                                                PMP::parameters::edge_is_constrained_map(Constraint<triangular_Mesh>(mesh, bound)));
+                                                PMP::parameters::edge_is_constrained_map(Constraint<Mesh>(mesh, bound)));
     log("- The graph has %d connected components (face connectivity).\n", num);
 
     typedef std::map<std::size_t/*index of CC*/, unsigned int/*nb*/> Components_size;
@@ -100,16 +100,16 @@ void ModelRepair::repair_manifoldness(triangular_Mesh& mesh)
     log("- We keep only components which have at least %d faces.\n", least_faces_per_component);
     PMP::keep_large_connected_components(mesh,
                                          least_faces_per_component,
-                                         PMP::parameters::edge_is_constrained_map(Constraint<triangular_Mesh>(mesh, bound)));
+                                         PMP::parameters::edge_is_constrained_map(Constraint<Mesh>(mesh, bound)));
 }
 
-typedef CGAL::Halfedge_around_face_circulator<triangular_Mesh> Halfedge_around_facet_circulator;
-void detect_borders(triangular_Mesh& poly, std::vector<halfedge_descriptor>& border_reps)
+typedef CGAL::Halfedge_around_face_circulator<Mesh> Halfedge_around_facet_circulator;
+void detect_borders(Mesh& poly, std::vector<halfedge_descriptor>& border_reps)
 {
     border_reps.clear();
     std::set<halfedge_descriptor> border_map;
     for(halfedge_descriptor h :  halfedges(poly)){
-        if(face(h,poly)== boost::graph_traits<triangular_Mesh>::null_face() && border_map.find(h) == border_map.end()){
+        if(face(h,poly)== boost::graph_traits<Mesh>::null_face() && border_map.find(h) == border_map.end()){
             border_reps.push_back(h);
             Halfedge_around_facet_circulator hf_around_facet(h,poly), done(hf_around_facet);
             do {
@@ -120,13 +120,13 @@ void detect_borders(triangular_Mesh& poly, std::vector<halfedge_descriptor>& bor
     }
 }
 
-void ModelRepair::repairBorders(triangular_Mesh& mesh) {
+void ModelRepair::repairBorders(Mesh& mesh) {
     log("Start stitching borders.\n");
     PMP::stitch_borders(mesh,
                         NP::apply_per_connected_component(false));
 }
 
-bool ModelRepair::isHoleMesh(triangular_Mesh& tMesh) {
+bool ModelRepair::isHoleMesh(Mesh tMesh) {
     unsigned int nb_holes = 0;
     for (halfedge_descriptor h: tMesh.halfedges()) {
         if (CGAL::is_border(h, tMesh)) {
@@ -136,7 +136,7 @@ bool ModelRepair::isHoleMesh(triangular_Mesh& tMesh) {
     return false;
 }
 
-void ModelRepair::repairHoleStepByStep(triangular_Mesh& tMesh) {
+void ModelRepair::repairHoleStepByStep(Mesh& tMesh) {
     unsigned int nb_holes = 0;
     int success_fill = 0;
     for (halfedge_descriptor h: tMesh.halfedges()) {
@@ -155,7 +155,7 @@ void ModelRepair::repairHoleStepByStep(triangular_Mesh& tMesh) {
     }
 }
 
-bool isSmallHole(halfedge_descriptor h, triangular_Mesh& mesh, double max_hole_diam, int max_num_hole_edges) {
+bool isSmallHole(halfedge_descriptor h, Mesh& mesh, double max_hole_diam, int max_num_hole_edges) {
     int num_hole_edges = 0;
     CGAL::Bbox_3 hole_bbox;
     for (halfedge_descriptor hc: CGAL::halfedges_around_face(h, mesh)) {
@@ -179,7 +179,7 @@ bool isSmallHole(halfedge_descriptor h, triangular_Mesh& mesh, double max_hole_d
     return true;
 }
 
-void ModelRepair::repairHoleOfDiameter(triangular_Mesh& mesh) {
+void ModelRepair::repairHoleOfDiameter(Mesh& mesh) {
     log("Start repairing hole.\n");
     //Both of these must be positive in order to be considered
     unsigned int nb_holes = 0;
@@ -207,7 +207,7 @@ void ModelRepair::repairHoleOfDiameter(triangular_Mesh& mesh) {
     log("The mesh has %d holes. \nsuccessfully fill %d holes.\n", nb_holes, success_fill);
 }
 
-bool ModelRepair::isSelfIntersect(triangular_Mesh& mesh) {
+bool ModelRepair::isSelfIntersect(Mesh& mesh) {
     bool intersecting = PMP::does_self_intersect<CGAL::Parallel_if_available_tag>(mesh,
                                                                                   CGAL::parameters::vertex_point_map(get(CGAL::vertex_point, mesh)));
     if (intersecting) {
@@ -219,14 +219,15 @@ bool ModelRepair::isSelfIntersect(triangular_Mesh& mesh) {
     }
 }
 
-void ModelRepair::repairSelfIntersect(triangular_Mesh& mesh) {
+void ModelRepair::repairSelfIntersect(Mesh& mesh) {
     log("Start repairing self-intersections.\n");
     std::vector<std::pair<face_descriptor, face_descriptor> > intersected_tris;
     PMP::self_intersections<CGAL::Parallel_if_available_tag>(faces(mesh), mesh, std::back_inserter(intersected_tris));
     log("%d pairs of triangles intersect.\n", intersected_tris.size());
 }
 
-void ModelRepair::repairModel(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, triangular_Mesh& mesh) {
+void ModelRepair::repairModel(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh) {
+    t.reset();
     if (PMP::is_polygon_soup_a_polygon_mesh(polygons)) {
         log("The polygon soup is a polygon mesh.\n");
         if (orientPolygon(points, polygons)) {
@@ -244,16 +245,33 @@ void ModelRepair::repairModel(std::vector<K::Point_3>& points, std::vector<std::
     } else {
         repairPolygon(points, polygons, mesh);
     }
+    repair_basic_time = t.time();
+    t.reset();
 
-    repair_manifoldness(mesh);
+    if (non_manifold_edge || non_manifold_vertex) {
+        t.reset();
+        repair_manifoldness(mesh);
+        repair_manifoldness_time = t.time();
+        t.reset();
+    }
+
 
     if (isHoleMesh(mesh)) {
+        t.reset();
         repairBorders(mesh);
+        repair_borders_time = t.time();
+        t.reset();
+
         repairHoleOfDiameter(mesh);
+        repair_holes_time = t.time();
+        t.reset();
     }
 
     if (isSelfIntersect(mesh)) {
+        t.reset();
         repairSelfIntersect(mesh);
+        repair_self_intersect_time = t.time();
+        t.reset();
     }
 
 }
@@ -261,28 +279,61 @@ void ModelRepair::repairModel(std::vector<K::Point_3>& points, std::vector<std::
 void ModelRepair::repairModel(std::string input_file, std::string output_file) {
     std::vector<K::Point_3> points;
     std::vector<std::vector<std::size_t> > polygons;
-    triangular_Mesh mesh;
-
+    Mesh mesh;
+    t.start();
     readPolygonSoup(input_file, points, polygons);
-
+    read_file_time = t.time();
     repairModel(points, polygons, mesh);
+    repair_time = repair_basic_time + repair_manifoldness_time + repair_borders_time + repair_holes_time + repair_self_intersect_time;
 
     writePolygon(output_file, mesh);
 }
 
+Mesh ModelRepair::repairModelMesh(std::string input_file, std::string output_file) {
+    std::vector<K::Point_3> points;
+    std::vector<std::vector<std::size_t> > polygons;
+    Mesh mesh;
+    t.start();
+
+    readPolygonSoup(input_file, points, polygons);
+    read_file_time = t.time();
+
+    repairModel(points, polygons, mesh);
+    repair_time = repair_basic_time + repair_manifoldness_time + repair_borders_time + repair_holes_time + repair_self_intersect_time;
+
+    writePolygon(output_file, mesh);
+    return mesh;
+}
+
+Mesh ModelRepair::repairModelMesh(std::string input_file) {
+    std::vector<K::Point_3> points;
+    std::vector<std::vector<std::size_t> > polygons;
+    Mesh mesh;
+    t.start();
+
+    readPolygonSoup(input_file, points, polygons);
+    read_file_time = t.time();
+
+    repairModel(points, polygons, mesh);
+    repair_time = repair_basic_time + repair_manifoldness_time + repair_borders_time + repair_holes_time + repair_self_intersect_time;
+
+    return mesh;
+}
+
 void ModelRepair::test() {
-    const std::string file_name = CGAL::data_file_path("E:/Datasets/modelrepair/bun_zipper_res4.stl");
+    const std::string file_name = CGAL::data_file_path("E:/Datasets/modelrepair/078.stl");
 
     std::vector<K::Point_3> points;
     std::vector<std::vector<std::size_t> > polygons;
-    triangular_Mesh mesh;
+    Mesh mesh;
     readPolygonSoup(file_name, points, polygons);
 
     repairModel(points, polygons, mesh);
 
-    const std::string output_file = "E:/Datasets/modelrepair/out_demo/bun_zipper_res4_r1.stl";
+    const std::string output_file = "E:/Datasets/modelrepair/out_demo/078.stl";
     writePolygon(output_file, mesh);
 }
 
 }
+
 #endif // LUNARMP_POLYGONMESHREPAIR_H
