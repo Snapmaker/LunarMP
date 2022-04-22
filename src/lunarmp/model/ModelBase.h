@@ -6,19 +6,26 @@
 #define LUNARMP_MODELBASE_H
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_mesh.h>
+#include <CGAL/Timer.h>
 
-typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-typedef K::Point_3 Point_3;
-typedef CGAL::Surface_mesh<Point_3> triangular_Mesh;
+#include <CGAL/Polygon_mesh_processing/IO/polygon_mesh_io.h>
 
-typedef boost::graph_traits<triangular_Mesh>::face_descriptor face_descriptor;
-typedef boost::graph_traits<triangular_Mesh>::edge_descriptor edge_descriptor;
-typedef boost::graph_traits<triangular_Mesh>::vertex_descriptor vertex_descriptor;
-typedef boost::graph_traits<triangular_Mesh>::halfedge_descriptor halfedge_descriptor;
-typedef K::Compare_dihedral_angle_3 Compare_dihedral_angle_3;
+#include "../utils/logoutput.h"
+
+typedef CGAL::Exact_predicates_inexact_constructions_kernel                 K;
+typedef K::Point_3                                                          Point_3;
+typedef CGAL::Surface_mesh<Point_3>                                         Mesh;
+
+typedef boost::graph_traits<Mesh>::face_descriptor               face_descriptor;
+typedef boost::graph_traits<Mesh>::edge_descriptor               edge_descriptor;
+typedef boost::graph_traits<Mesh>::vertex_descriptor             vertex_descriptor;
+typedef boost::graph_traits<Mesh>::halfedge_descriptor           halfedge_descriptor;
+typedef K::Compare_dihedral_angle_3                              Compare_dihedral_angle_3;
 
 namespace PMP = CGAL::Polygon_mesh_processing;
 namespace NP = CGAL::parameters;
+
+namespace lunarmp {
 
 struct Visitor : public PMP::Default_orientation_visitor {
     int* non_manifold_edge_num;
@@ -70,5 +77,5 @@ struct Put_true {
     }
     PM pm;
 };
-
-#endif  // LUNARMP_MODELBASE_H
+}
+#endif // LUNARMP__MODELBASE_H
