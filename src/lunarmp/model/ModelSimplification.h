@@ -37,8 +37,8 @@ namespace lunarmp {
 
 class ModelSimplification {
   public:
-    int remove_edge = 0;              //! The total number of edges removed in the model simplification.
-    double simplification_time = 0.0; //! The time spent simplifying the model.
+    int remove_edge = 0;                  //! The total number of edges removed in the model simplification.
+    double simplification_time = 0.0;     //! The time spent simplifying the model.
 
     /*!
      * \brief Read file
