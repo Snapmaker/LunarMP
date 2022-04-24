@@ -15,13 +15,12 @@ bool ModelCompare::readFile(std::string fileName, Mesh& mesh) {
     return EXIT_SUCCESS;
 }
 
-void ModelCompare::hausdorffDistance(Mesh& mesh1, Mesh& mesh2, int unit)
+void ModelCompare::boundedErrorSymmetricHausdorffDistance(Mesh& mesh1, Mesh& mesh2, double error_bound)
 {
-    hausdorff_distance =
-        PMP::approximate_Hausdorff_distance<TAG>(mesh1, mesh2,
-                                                 NP::number_of_points_per_area_unit(unit));
+    hausdorff_bounded_error_distance =
+        PMP::bounded_error_symmetric_Hausdorff_distance<TAG>(mesh1, mesh2, error_bound);
 
-    log("Approximated Hausdorff distance: %lf.\n", hausdorff_distance);
+    log("Approximated Hausdorff Bounded Error Distance: %lf.\n", hausdorff_bounded_error_distance);
 }
 
 void ModelCompare::modelCompare(std::string baseFile, Mesh& mesh2, double error_bound)
