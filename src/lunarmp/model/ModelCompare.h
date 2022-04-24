@@ -9,9 +9,7 @@ namespace lunarmp {
 
 class ModelCompare {
   public:
-    double hausdorff_distance = 0;
-    double hausdorff_bounded_error_distance = 0;
-    double bounded_error_symmetric_Hausdorff_distance = 0;
+    double hausdorff_distance = 0;               //! the Hausdorff distance from a mesh tm1 to a mesh tm2.
     double compare_time = 0;
 
     /*!
