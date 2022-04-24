@@ -181,7 +181,7 @@ bool isSmallHole(halfedge_descriptor h, Mesh& mesh, double max_hole_diam, int ma
 
 void ModelRepair::repairHoleOfDiameter(Mesh& mesh) {
     log("Start repairing hole.\n");
-    //Both of these must be positive in order to be considered
+    // Both of these must be positive in order to be considered
     unsigned int nb_holes = 0;
     std::vector<halfedge_descriptor> border_cycles;
     // collect one halfedge per boundary cycle
@@ -287,37 +287,6 @@ void ModelRepair::repairModel(std::string input_file, std::string output_file) {
     repair_time = repair_basic_time + repair_manifoldness_time + repair_borders_time + repair_holes_time + repair_self_intersect_time;
 
     writePolygon(output_file, mesh);
-}
-
-Mesh ModelRepair::repairModelMesh(std::string input_file, std::string output_file) {
-    std::vector<K::Point_3> points;
-    std::vector<std::vector<std::size_t> > polygons;
-    Mesh mesh;
-    t.start();
-
-    readPolygonSoup(input_file, points, polygons);
-    read_file_time = t.time();
-
-    repairModel(points, polygons, mesh);
-    repair_time = repair_basic_time + repair_manifoldness_time + repair_borders_time + repair_holes_time + repair_self_intersect_time;
-
-    writePolygon(output_file, mesh);
-    return mesh;
-}
-
-Mesh ModelRepair::repairModelMesh(std::string input_file) {
-    std::vector<K::Point_3> points;
-    std::vector<std::vector<std::size_t> > polygons;
-    Mesh mesh;
-    t.start();
-
-    readPolygonSoup(input_file, points, polygons);
-    read_file_time = t.time();
-
-    repairModel(points, polygons, mesh);
-    repair_time = repair_basic_time + repair_manifoldness_time + repair_borders_time + repair_holes_time + repair_self_intersect_time;
-
-    return mesh;
 }
 
 void ModelRepair::test() {

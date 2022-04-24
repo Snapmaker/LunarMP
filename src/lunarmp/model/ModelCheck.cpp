@@ -106,7 +106,7 @@ bool ModelRepair::checkTest(std::string file_name) {
     std::cout << "is_intersecting: " << is_intersecting << std::endl;
     std::cout << "is_producing_self_intersecting: " << is_producing_self_intersecting << std::endl;
     check_time = t1.time();
-    if (non_manifold_edge || non_manifold_vertex || number_of_holes || !is_outward_mesh || is_intersecting) {
+    if (non_manifold_edge || non_manifold_vertex || number_of_holes || !is_outward_mesh || number_of_intersections) {
         return false;
     }
     else {

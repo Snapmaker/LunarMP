@@ -189,9 +189,6 @@ class ModelRepair {
      * \brief Model repair interface.
      */
     void repairModel(std::string input_file, std::string output_file);
-    triangular_Mesh repairModelMesh(std::string input_file, std::string output_file);
-    triangular_Mesh repairModelMesh(std::string input_file);
-
 
     /*!
      * \brief Test interface.
