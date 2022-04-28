@@ -10,10 +10,14 @@ set(PROJECT_SRCS
         src/lunarmp/model/ModelCompare.cpp
         src/lunarmp/model/ModelSimplification.cpp
 
+        srd/lunarmp/test/ModelTest.cpp
+
         src/lunarmp/utils/logoutput.cpp
         )
 
 add_library(_LunarMP STATIC ${PROJECT_SRCS})
+
+target_include_directories(_LunarMP PUBLIC "C:/msys64/mingw64/include/")
 
 # CGAL and its components
 find_package(CGAL REQUIRED)

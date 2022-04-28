@@ -61,16 +61,9 @@ class ModelRepair {
     int duplicated_vertex = 0;               //! Numbers of duplicated vertex
     int vertex_id_in_polygon_replaced = 0;   //! Numbers of vertex_id in polygon replaced
     int polygon_orientation_reversed = 0;    //! Numbers of polygon orientation reversed
-    int number_of_connected_components = 0;  //! Number of connected components
-    int number_of_holes = 0;                 //! Number of holes
-    int number_of_intersections = 0;         //! Number of intersections
-
-    bool is_outward_mesh = false; //! A closed triangle mesh has a positive orientation.
-    bool is_intersecting = false; //! A triangulated surface mesh self-intersects.
-    bool is_producing_self_intersecting = false; //! Number of intersections between a subset of faces of a triangulated surface mesh.
 
     CGAL::Timer t;
-    double check_time = 0;                      //! The time spent inspecting the model.
+
     double repair_time = 0;                     //! Total model repair time taken
     double repair_basic_time = 0;               //! Time spent on base repairs
     double repair_manifoldness_time = 0;        //! Time spent on manifold vertices & edges repairs
@@ -195,32 +188,6 @@ class ModelRepair {
      */
     void test();
 
-    /*!
-     * \brief Check the number of components in the model.
-     */
-    void checkConnectedComponents(Mesh mesh);
-
-    /*!
-     * \brief Determine whether there are holes in the mesh.
-     */
-    void checkHoles(Mesh mesh);
-
-    /*!
-     * \brief Determine whether the mesh is self-intersecting.
-     */
-    void checkIntersect(Mesh mesh);
-
-    /*!
-     * \brief Check the model for errors.
-     */
-    void checkModel(std::string input_file);
-
-    /*!
-     * \brief Test interface.
-     */
-    void checkTest1();
-
-    bool checkTest(std::string file_name);
 };
 }
 
