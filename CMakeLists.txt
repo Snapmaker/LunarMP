@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD 14)
 set(PROJECT_SRCS
         src/lunarmp/model/ModelCheck.cpp
         src/lunarmp/model/ModelRepair.cpp
+        src/lunarmp/model/ModelCompare.cpp
+        src/lunarmp/model/ModelSimplification.cpp
 
         src/lunarmp/utils/logoutput.cpp
         )
