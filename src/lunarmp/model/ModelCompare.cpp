@@ -6,20 +6,13 @@
 
 namespace lunarmp {
 
-void ModelCompare::readFile(std::string fileName, Mesh& mesh) {
+bool ModelCompare::readFile(std::string fileName, Mesh& mesh) {
     if (!PMP::IO::read_polygon_mesh(fileName, mesh))
     {
-        std::cerr << "Invalid input." << std::endl;
+        log("Invalid input.");
+        return EXIT_FAILURE;
     }
-}
-
-void ModelCompare::hausdorffDistance(Mesh& mesh1, Mesh& mesh2, int unit)
-{
-    hausdorff_distance =
-        PMP::approximate_Hausdorff_distance<TAG>(mesh1, mesh2,
-                                                 NP::number_of_points_per_area_unit(unit));
-
-    log("Approximated Hausdorff distance: %lf.\n", hausdorff_distance);
+    return EXIT_SUCCESS;
 }
 
 void ModelCompare::boundedErrorSymmetricHausdorffDistance(Mesh& mesh1, Mesh& mesh2, double error_bound)

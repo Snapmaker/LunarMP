@@ -6,6 +6,21 @@
 
 namespace lunarmp {
 
+bool ModelSimplification::readFile(std::string input_file, Mesh& mesh) {
+    const std::string filename = CGAL::data_file_path(input_file);
+    if(!PMP::IO::read_polygon_mesh(filename, mesh))
+    {
+        std::cerr << "Invalid input." << std::endl;
+        return EXIT_FAILURE;
+    }
+    if(!CGAL::is_triangle_mesh(mesh))
+    {
+        std::cerr << "Input geometry is not triangulated." << std::endl;
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
 typedef typename SMS::GarlandHeckbert_policies<Mesh, K>            GH_policies;
 typedef typename GH_policies::Get_cost                             GH_cost;
 typedef typename GH_policies::Get_placement                        GH_placement;
@@ -108,21 +123,6 @@ void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double Edg
     log("Time elapsed: %f4lf s.\n", simplification_time);
     log("Finished.\n Removed edges: %d, final edges: %d.\n", remove_edge, mesh.number_of_edges());
 
-}
-
-bool ModelSimplification::readFile(std::string input_file, Mesh& mesh) {
-    const std::string filename = CGAL::data_file_path(input_file);
-    if(!PMP::IO::read_polygon_mesh(filename, mesh))
-    {
-        std::cerr << "Invalid input." << std::endl;
-        return EXIT_FAILURE;
-    }
-    if(!CGAL::is_triangle_mesh(mesh))
-    {
-        std::cerr << "Input geometry is not triangulated." << std::endl;
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
 }
 
 void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, int type, double machine_box, double threshold){
