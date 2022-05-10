@@ -61,16 +61,9 @@ class ModelRepair {
     int duplicated_vertex = 0;               //! Numbers of duplicated vertex
     int vertex_id_in_polygon_replaced = 0;   //! Numbers of vertex_id in polygon replaced
     int polygon_orientation_reversed = 0;    //! Numbers of polygon orientation reversed
-    int number_of_connected_components = 0;  //! Number of connected components
-    int number_of_holes = 0;                 //! Number of holes
-    int number_of_intersections = 0;         //! Number of intersections
-
-    bool is_outward_mesh = false; //! A closed triangle mesh has a positive orientation.
-    bool is_intersecting = false; //! A triangulated surface mesh self-intersects.
-    bool is_producing_self_intersecting = false; //! Number of intersections between a subset of faces of a triangulated surface mesh.
 
     CGAL::Timer t;
-    double check_time = 0;                      //! The time spent inspecting the model.
+
     double repair_time = 0;                     //! Total model repair time taken
     double repair_basic_time = 0;               //! Time spent on base repairs
     double repair_manifoldness_time = 0;        //! Time spent on manifold vertices & edges repairs
@@ -95,7 +88,7 @@ class ModelRepair {
      * \param file_name the name of the file.
      * \param mesh the mesh to be output.
      */
-    void writePolygon(std::string file_name, triangular_Mesh& mesh);
+    void writePolygon(std::string file_name, Mesh& mesh);
 
     /*!
      * \brief Repair polygon soup
@@ -113,7 +106,7 @@ class ModelRepair {
      * \param polygons each element in the range describes a polygon using the indices of the vertices.
      * \param mesh model mesh
      */
-    void repairPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, triangular_Mesh& mesh);
+    void repairPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh);
 
     /*!
      * \brief Orient polygon soup.
@@ -123,67 +116,67 @@ class ModelRepair {
     /*!
      * \brief Judge whether the normal vectors of the mesh face outwards uniformly.
      */
-    void isOutwardMesh(triangular_Mesh& mesh);
+    void isOutwardMesh(Mesh& mesh);
 
     /*!
      * \brief Stitch borders for mesh.
      */
-    void repairBorders(triangular_Mesh& mesh);
+    void repairBorders(Mesh& mesh);
 
     /*!
      * \brief Check the mesh for non-streaming vertices.
      */
-    void is_manifoldness(triangular_Mesh& mesh);
+    void is_manifoldness(Mesh& mesh);
 
     /*!
      * \brief Fixed mesh non-manifold problems.
      */
-    void repair_manifoldness(triangular_Mesh& mesh);
+    void repair_manifoldness(Mesh& mesh);
 
     /*!
      * \brief Determine whether there are holes in the mesh.
      */
-    bool isHoleMesh(triangular_Mesh mesh);
+    bool isHoleMesh(Mesh mesh);
 
     /*!
      * \brief Repair each hole step by step.
      */
-    void repairHoleStepByStep(triangular_Mesh& mesh);
+    void repairHoleStepByStep(Mesh& mesh);
 
     /*!
      * \brief Repair holes larger than specified diameter.
      */
-    void repairHoleOfDiameter(triangular_Mesh& mesh);
+    void repairHoleOfDiameter(Mesh& mesh);
 
     /*!
      * \brief Get all pairs of self-intersecting triangle faces.
      */
-    void getIntersectedTris(triangular_Mesh& mesh);
+    void getIntersectedTris(Mesh& mesh);
 
     /*!
      * \brief Determine whether the mesh is self-intersecting.
      */
-    bool isSelfIntersect(triangular_Mesh& mesh);
+    bool isSelfIntersect(Mesh& mesh);
 
     /*!
      * \brief Repair self-intersecting.
      */
-    void repairSelfIntersect(triangular_Mesh& mesh);
+    void repairSelfIntersect(Mesh& mesh);
 
     /*!
      * \brief Delete degenerate edges and degenerate surfaces.
      */
-    void removeDegenerate(triangular_Mesh& mesh);
+    void removeDegenerate(Mesh& mesh);
 
     /*!
      * \brief Rebuild the grid using the topology.
      */
-    void isotropic_remeshing(triangular_Mesh& mesh);
+    void isotropic_remeshing(Mesh& mesh);
 
     /*!
      * \brief Comprehensive repair interface.
      */
-    void repairModel(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, triangular_Mesh& mesh);
+    void repairModel(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh);
 
     /*!
      * \brief Model repair interface.
@@ -195,32 +188,6 @@ class ModelRepair {
      */
     void test();
 
-    /*!
-     * \brief Check the number of components in the model.
-     */
-    void checkConnectedComponents(triangular_Mesh mesh);
-
-    /*!
-     * \brief Determine whether there are holes in the mesh.
-     */
-    void checkHoles(triangular_Mesh mesh);
-
-    /*!
-     * \brief Determine whether the mesh is self-intersecting.
-     */
-    void checkIntersect(triangular_Mesh mesh);
-
-    /*!
-     * \brief Check the model for errors.
-     */
-    void checkModel(std::string input_file);
-
-    /*!
-     * \brief Test interface.
-     */
-    void checkTest1();
-
-    bool checkTest(std::string file_name);
 };
 }
 

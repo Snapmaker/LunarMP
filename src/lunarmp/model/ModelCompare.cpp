@@ -26,11 +26,11 @@ void ModelCompare::boundedErrorSymmetricHausdorffDistance(Mesh& mesh1, Mesh& mes
 void ModelCompare::modelCompare(std::string baseFile, Mesh& mesh2, double error_bound)
 {
     Mesh base;
-    read(base, baseFile);
+    readFile(baseFile, base);
 
     CGAL::Timer t;
     t.start();
-    hausdorffBoundedErrorDistance(base, mesh2, error_bound);
+    boundedErrorSymmetricHausdorffDistance(base, mesh2, error_bound);
     compare_time = t.time();
 }
 
@@ -38,15 +38,15 @@ void ModelCompare::modelCompare(Mesh& base, Mesh& mesh2, double error_bound)
 {
     CGAL::Timer t;
     t.start();
-    hausdorffBoundedErrorDistance(base, mesh2, error_bound);
+    boundedErrorSymmetricHausdorffDistance(base, mesh2, error_bound);
     compare_time = t.time();
 }
 
 void ModelCompare::test()
 {
     Mesh base, simp;
-    read(base, "D:\\source\\repos\\ConsoleApplication1\\bun.off");
-    read(simp, "D:\\source\\repos\\ConsoleApplication1\\bunout.off");
+    readFile("D:\\source\\repos\\ConsoleApplication1\\bun.off", base);
+    readFile("D:\\source\\repos\\ConsoleApplication1\\bunout.off", simp);
 
     CGAL::Timer t;
     t.start();
@@ -58,17 +58,17 @@ void ModelCompare::test()
     log("Unit: 4000, (Done: %lf).\n", t.time());
     std::cout << "(Done: " << t.time() << ")" << std::endl;
 
-    t.reset();
-    hausdorffBoundedErrorDistance(base, simp, 0.01);
-    log("Bound error: 0.01, (Done: %lf).\n", t.time());
+    //t.reset();
+    //hausdorffBoundedErrorDistance(base, simp, 0.01);
+    //log("Bound error: 0.01, (Done: %lf).\n", t.time());
 
-    t.reset();
-    hausdorffBoundedErrorDistance(base, simp, 0.001);
-    log("Bound error: 0.001, (Done: %lf).\n", t.time());
+    //t.reset();
+    //hausdorffBoundedErrorDistance(base, simp, 0.001);
+    //log("Bound error: 0.001, (Done: %lf).\n", t.time());
 
-    t.reset();
-    hausdorffBoundedErrorDistance(base, simp, 0.0001);
-    log("Bound error: 0.0001, (Done: %lf s).\n", t.time());
+    //t.reset();
+    //hausdorffBoundedErrorDistance(base, simp, 0.0001);
+    //log("Bound error: 0.0001, (Done: %lf s).\n", t.time());
 
 
     t.reset();

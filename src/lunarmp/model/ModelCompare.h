@@ -5,11 +5,18 @@
 #ifndef LUNARMP_DEPS_SRC_LUNARMP_MODEL_MODELCOMPARE_H_
 #define LUNARMP_DEPS_SRC_LUNARMP_MODEL_MODELCOMPARE_H_
 
+#include "ModelBase.h"
+
+#include <CGAL/Polygon_mesh_processing/distance.h>
+#include <CGAL/Polygon_mesh_processing/remesh.h>
+
+#define TAG CGAL::Parallel_if_available_tag
+
 namespace lunarmp {
 
 class ModelCompare {
   public:
-    double hausdorff_distance = 0;               //! the Hausdorff distance from a mesh tm1 to a mesh tm2.
+    double hausdorff_bounded_error_distance = 0;               //! the Hausdorff distance from a mesh tm1 to a mesh tm2.
     double compare_time = 0;
 
     /*!
@@ -19,7 +26,7 @@ class ModelCompare {
      * \param mesh
      *
      */
-    void readFile(std::string fileName, Mesh& mesh);
+    bool readFile(std::string fileName, Mesh& mesh);
 
     /*!
      * \brief Computes the approximate Hausdorff distance from mesh1 to mesh2

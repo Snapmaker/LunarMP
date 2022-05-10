@@ -128,7 +128,7 @@ void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double Edg
 void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, int type, double machine_box, double threshold){
     Mesh mesh;
     readFile(input_file, mesh);
-    autoSimplify(mesh, double machine_box, threshold);
+    autoSimplify(mesh, machine_box, threshold);
     CGAL::IO::write_polygon_mesh(output_file, mesh, CGAL::parameters::stream_precision(17));
 }
 

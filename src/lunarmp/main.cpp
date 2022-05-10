@@ -1,8 +1,9 @@
-#include "model/ModelCheck.h"
+#include "test/ModelTest.h"
 
 int main(int argc, char **argv)
 {
-    lunarmp::ModelCheck model_check;
-    model_check.test1();
+    lunarmp::ModelTest test;
+    test.testOutput();
+//    test.simpfyOutput();
     return 0;
 }
