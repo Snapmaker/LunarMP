@@ -1,9 +1,7 @@
-#include "test/ModelTest.h"
+#include "Application.h"
 
 int main(int argc, char **argv)
 {
-    lunarmp::ModelTest test;
-    test.testOutput();
-//    test.simpfyOutput();
+    lunarmp::Application::getInstance().run(argc, argv);
     return 0;
 }

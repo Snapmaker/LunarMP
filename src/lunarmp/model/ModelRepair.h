@@ -5,72 +5,69 @@
 #ifndef LUNARMP_MODELREPAIR_H
 #define LUNARMP_MODELREPAIR_H
 
+#include <CGAL/IO/polygon_soup_io.h>
+#include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
+#include <CGAL/Polygon_mesh_processing/orientation.h>
 #include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
 #include <CGAL/Polygon_mesh_processing/repair_polygon_soup.h>
-#include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
 #include <CGAL/Polygon_mesh_processing/self_intersections.h>
-#include <CGAL/Polygon_mesh_processing/triangulate_hole.h>
 #include <CGAL/Polygon_mesh_processing/stitch_borders.h>
-#include <CGAL/Polygon_mesh_processing/orientation.h>
-#include <CGAL/IO/polygon_soup_io.h>
+#include <CGAL/Polygon_mesh_processing/triangulate_hole.h>
+
+#include <fstream>
+#include <iostream>
 
 #include "ModelBase.h"
-
-#include <iostream>
-#include <fstream>
 
 namespace lunarmp {
 
 class ModelRepair {
-
   private:
     // fill holes params
-    double max_hole_diam = -1.0;    //! Lower diameter of filling hole
+    double max_hole_diam = -1.0;  //! Lower diameter of filling hole
 
-    int max_num_hole_edges = -1;    //! Lower limit of the number of edges for filling holes
+    int max_num_hole_edges = -1;  //! Lower limit of the number of edges for filling holes
 
-    bool use_delaunay_triangulation = true;     //! If true, use the Delaunay triangulation facet search space.
-                                                //! If no valid triangulation can be found in this search space,
-                                                //! the algorithm falls back to the non-Delaunay triangulations
-                                                //! search space to find a solution.
-                                                //!  Default: true
+    bool use_delaunay_triangulation = true;  //! If true, use the Delaunay triangulation facet search space.
+                                             //! If no valid triangulation can be found in this search space,
+                                             //! the algorithm falls back to the non-Delaunay triangulations
+                                             //! search space to find a solution.
+                                             //!  Default: true
 
-    bool use_2d_constrained_delaunay_triangulation = true;      //! If true, the points of the boundary of the hole are
-                                                                //! used to estimate a fitting plane and a 2D constrained
-                                                                //! Delaunay triangulation is then used to fill the hole
-                                                                //! projected in the fitting plane.
-                                                                //!  Default: true
+    bool use_2d_constrained_delaunay_triangulation = true;  //! If true, the points of the boundary of the hole are
+                                                            //! used to estimate a fitting plane and a 2D constrained
+                                                            //! Delaunay triangulation is then used to fill the hole
+                                                            //! projected in the fitting plane.
+                                                            //!  Default: true
 
-    K::FT threshold_distance = K::FT(-1);       //! The maximum distance between the vertices of the hole boundary and
-                                                //! the least squares plane fitted to this boundary.
-                                                //! This parameter is used only in conjunction with use_2d_constrained_delaunay_triangulation.
+    K::FT threshold_distance = K::FT(-1);  //! The maximum distance between the vertices of the hole boundary and
+                                           //! the least squares plane fitted to this boundary.
+                                           //! This parameter is used only in conjunction with use_2d_constrained_delaunay_triangulation.
 
-    double density_control_factor = K::FT(sqrt(2));      //! factor to control density of the output mesh, where larger values
-                                                         //! cause denser refinements
+    double density_control_factor = K::FT(sqrt(2));  //! factor to control density of the output mesh, where larger values
+                                                     //! cause denser refinements
 
-    int fairing_continuity = 1;     //! A value control the tangential continuity of the output surface patch.
-                                    //! The possible values are 0, 1 and 2, refer to the C0, C1 and C2 continuity.
+    int fairing_continuity = 1;  //! A value control the tangential continuity of the output surface patch.
+                                 //! The possible values are 0, 1 and 2, refer to the C0, C1 and C2 continuity.
 
-    int least_faces_per_component = 2; //! A component need to have at least faces.
-
+    int least_faces_per_component = 2;  //! A component need to have at least faces.
 
   public:
-
-    int non_manifold_edge = 0;               //! Numbers of non-manifold_edge
-    int non_manifold_vertex = 0;             //! non-manifold vertex
-    int duplicated_vertex = 0;               //! Numbers of duplicated vertex
-    int vertex_id_in_polygon_replaced = 0;   //! Numbers of vertex_id in polygon replaced
-    int polygon_orientation_reversed = 0;    //! Numbers of polygon orientation reversed
+    int non_manifold_edge = 0;              //! Numbers of non-manifold_edge
+    int non_manifold_vertex = 0;            //! non-manifold vertex
+    int duplicated_vertex = 0;              //! Numbers of duplicated vertex
+    int vertex_id_in_polygon_replaced = 0;  //! Numbers of vertex_id in polygon replaced
+    int polygon_orientation_reversed = 0;   //! Numbers of polygon orientation reversed
 
     CGAL::Timer t;
 
-    double repair_time = 0;                     //! Total model repair time taken
-    double repair_basic_time = 0;               //! Time spent on base repairs
-    double repair_manifoldness_time = 0;        //! Time spent on manifold vertices & edges repairs
-    double repair_borders_time = 0;             //! Time spent on borders repairs
-    double repair_holes_time = 0;               //! Time spent on holes repairs
-    double repair_self_intersect_time = 0;      //! Time spent on self intersecting triangular plane repairs
-    double read_file_time = 0;                  //! Time spent on file to read
+    double repair_time = 0;                 //! Total model repair time taken
+    double repair_basic_time = 0;           //! Time spent on base repairs
+    double repair_manifoldness_time = 0;    //! Time spent on manifold vertices & edges repairs
+    double repair_borders_time = 0;         //! Time spent on borders repairs
+    double repair_holes_time = 0;           //! Time spent on holes repairs
+    double repair_self_intersect_time = 0;  //! Time spent on self intersecting triangular plane repairs
+    double read_file_time = 0;              //! Time spent on file to read
 
     /*!
      * \brief Read model file as polygon soup, support off/obj/stl/ply/ts/vtp file
@@ -124,14 +121,9 @@ class ModelRepair {
     void repairBorders(Mesh& mesh);
 
     /*!
-     * \brief Check the mesh for non-streaming vertices.
-     */
-    void is_manifoldness(Mesh& mesh);
-
-    /*!
      * \brief Fixed mesh non-manifold problems.
      */
-    void repair_manifoldness(Mesh& mesh);
+    void repairManifoldness(Mesh& mesh);
 
     /*!
      * \brief Determine whether there are holes in the mesh.
@@ -187,10 +179,7 @@ class ModelRepair {
      * \brief Test interface.
      */
     void test();
-
 };
-}
+}  // namespace lunarmp
 
-#endif // LUNARMP_MODELREPAIR_H
-
-
+#endif  // LUNARMP_MODELREPAIR_H

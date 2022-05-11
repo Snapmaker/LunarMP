@@ -21,64 +21,64 @@ void splitPath(const std::string& str, const std::string& sp, std::vector<std::s
 }
 
 void ModelTest::GetSpecialFilesFromDirectory(std::string path, std::string fileType, std::vector<std::string>& files) {
-    std::vector<std::string> tempFileTypes;
-    splitPath(fileType, " ", tempFileTypes);
-    if (tempFileTypes.size() == 0) return;
-
-    for (int i = 0; i < tempFileTypes.size(); ++i) {
-        // 文件句柄
-        __int64 hFile = 0;
-        // 文件信息
-        struct _finddata_t fileinfo;
-
-        std::string p;
-
-        if ((hFile = _findfirst(p.assign(path).append("\\*" + tempFileTypes[i]).c_str(), &fileinfo)) != -1) {
-            do {
-                // 第一种：保存文件的全路径
-                files.push_back(p.assign(path).append("\\").append(fileinfo.name));
-                //第二种：不保存文件的全路径
-                // files.push_back(fileinfo.name);
-            } while (_findnext(hFile, &fileinfo) == 0);  //寻找下一个，成功返回0，否则-1
-
-            _findclose(hFile);
-        }
-    }
+//    std::vector<std::string> tempFileTypes;
+//    splitPath(fileType, " ", tempFileTypes);
+//    if (tempFileTypes.size() == 0) return;
+//
+//    for (int i = 0; i < tempFileTypes.size(); ++i) {
+//        // 文件句柄
+//        __int64 hFile = 0;
+//        // 文件信息
+//        struct _finddata_t fileinfo;
+//
+//        std::string p;
+//
+//        if ((hFile = _findfirst(p.assign(path).append("\\*" + tempFileTypes[i]).c_str(), &fileinfo)) != -1) {
+//            do {
+//                // 第一种：保存文件的全路径
+//                files.push_back(p.assign(path).append("\\").append(fileinfo.name));
+//                //第二种：不保存文件的全路径
+//                // files.push_back(fileinfo.name);
+//            } while (_findnext(hFile, &fileinfo) == 0);  //寻找下一个，成功返回0，否则-1
+//
+//            _findclose(hFile);
+//        }
+//    }
 }
 
 void ModelTest::GetAllFilesIncludeSubfolder(std::string path, std::string fileType, std::vector<std::string>& files) {
-    std::vector<std::string> tempFileTypes;
-    splitPath(fileType, "|", tempFileTypes);
-    if (tempFileTypes.size() == 0) return;
-    //文件句柄
-    __int64 hFile = 0;
-    //文件信息
-    struct _finddata_t fileinfo;
-    std::string p;
-    if ((hFile = _findfirst(p.assign(path).append("\\*").c_str(), &fileinfo)) != -1) {
-        do {
-            if ((fileinfo.attrib & _A_SUBDIR)) {  //比较文件类型是否是文件夹
-                if (strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0) {
-                    std::string subForld = p.assign(path).append("\\").append(fileinfo.name);
-
-                    //递归搜索子文件夹
-                    GetAllFilesIncludeSubfolder(p.assign(path).append("\\").append(fileinfo.name), fileType, files);
-                }
-            } else {
-                for (int i = 0; i < tempFileTypes.size(); ++i) {
-                    std::string fileName = fileinfo.name;
-                    if (fileName.find(tempFileTypes[i]) != std::string::npos) {
-                        // 第一种：保存文件的全路径
-                        files.push_back(p.assign(path).append("\\").append(fileinfo.name));
-
-                        //第二种：不保存文件的全路径
-                        // files.push_back(fileinfo.name);
-                    }
-                }
-            }
-        } while (_findnext(hFile, &fileinfo) == 0);  //寻找下一个，成功返回0，否则-1
-        _findclose(hFile);
-    }
+//    std::vector<std::string> tempFileTypes;
+//    splitPath(fileType, "|", tempFileTypes);
+//    if (tempFileTypes.size() == 0) return;
+//    //文件句柄
+//    __int64 hFile = 0;
+//    //文件信息
+//    struct _finddata_t fileinfo;
+//    std::string p;
+//    if ((hFile = _findfirst(p.assign(path).append("\\*").c_str(), &fileinfo)) != -1) {
+//        do {
+//            if ((fileinfo.attrib & _A_SUBDIR)) {  //比较文件类型是否是文件夹
+//                if (strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0) {
+//                    std::string subForld = p.assign(path).append("\\").append(fileinfo.name);
+//
+//                    //递归搜索子文件夹
+//                    GetAllFilesIncludeSubfolder(p.assign(path).append("\\").append(fileinfo.name), fileType, files);
+//                }
+//            } else {
+//                for (int i = 0; i < tempFileTypes.size(); ++i) {
+//                    std::string fileName = fileinfo.name;
+//                    if (fileName.find(tempFileTypes[i]) != std::string::npos) {
+//                        // 第一种：保存文件的全路径
+//                        files.push_back(p.assign(path).append("\\").append(fileinfo.name));
+//
+//                        //第二种：不保存文件的全路径
+//                        // files.push_back(fileinfo.name);
+//                    }
+//                }
+//            }
+//        } while (_findnext(hFile, &fileinfo) == 0);  //寻找下一个，成功返回0，否则-1
+//        _findclose(hFile);
+//    }
 }
 
 int ModelTest::getFileSize(std::string filepath) {
@@ -152,62 +152,62 @@ int ModelTest::simpfyOutput() {
 }
 
 int ModelTest::testOutput() {
-    std::vector<std::string> m_Files;
-    std::string path = "E:\\Datasets\\3d\\123456789101112\\";
-    GetAllFilesIncludeSubfolder(path, ".stl", m_Files);
-
-    std::ofstream outFile;
-    outFile.open("E:\\Datasets\\repaired\\12.csv", std::ios::out);
-    outFile << "File" << ',' << "Size" << ',' << "Defective" << ',' << "Check_Time" << ',' << "non_manifold_edge" << ',' << "non_manifold_vertex" << ','
-            << "duplicated_vertex" << ',' << "polygon_orientation_reversed" << ',' << "number_of_connected_components" << ',' << "number_of_holes" << ','
-            << "number_of_intersections" << ',' << "Repair_Time" << ',' << "repair_basic_time" << ',' << "read_file_time" << ',' << "repair_manifoldness_time"
-            << ',' << "repair_borders_time" << ',' << "repair_holes_time" << ',' << "repair_self_intersect_time" << std::endl;
-    //            << "repair_borders_time" << ',' << "repair_holes_time" << ',' << "repair_self_intersect_time" << ','
-    //            << "simplification_time" << ',' << "compare_time" << ',' << "hausdorff_bounded_error_distance" << std::endl;
-
-    for (int i = 0; i < m_Files.size(); ++i) {
-        int size = getFileSize((m_Files[i]));
-
-        std::cout << m_Files[i] << "\tsize: " << size << std::endl;
-
-        //        if (size == 150000000) {
-        //            continue;
-        //        }
-        Mesh mesh;
-        ModelCheck mc;
-        ModelRepair mr;
-        ModelSimplification ms;
-        ModelCompare mcp;
-
-        //bool f = false;
-        bool f = mc.checkTest(m_Files[i]);
-        //        if (f) {
-        //            std::string patten = "\\";
-        //            std::string outFiles = "E:\\A\\3D_model1\\" + getFileName(m_Files[i], patten);
-        //            std::cout << outFiles << std::endl;
-        //            mesh = mr.repairModelMesh(m_Files[i], outFiles);
-        ////            mesh = ms.modelSimplification(mesh, 0.2);
-        //        }
-        //        else {
-        ////            mesh = ms.modelSimplification(m_Files[i], 0.2);
-        //        }
-        std::string patten = "\\";
-        std::string outFiles = "E:\\Datasets\\repaired\\12\\" + getFileName(m_Files[i], patten);
-        std::cout << outFiles << std::endl;
-        mr.repairModel(m_Files[i], outFiles);
-        //        mcp.modelCompare(m_Files[i], mesh, 0.01);
-        outFile << outFiles << ',' << size << ',' << f << ',' << mc.check_time << ',' << mr.non_manifold_edge << ',' << mr.non_manifold_vertex << ','
-                << mr.duplicated_vertex << ',' << mr.polygon_orientation_reversed << ',' << mr.number_of_connected_components << ',' << mr.number_of_holes
-                << ',' << mr.number_of_intersections << ',' << mr.repair_time << ',' << mr.read_file_time << ',' << mr.repair_basic_time << ','
-                << mr.repair_manifoldness_time << ',' << mr.repair_borders_time << ',' << mr.repair_holes_time << ',' << mr.repair_self_intersect_time
-                << std::endl;
-        //                << mr.repair_borders_time << ',' << mr.repair_holes_time << ',' << mr.repair_self_intersect_time << ','
-        //                << ms.simplification_time << ',' << mcp.compare_time << ',' << mcp.hausdorff_bounded_error_distance << std::endl;
-
-        std::cout << "check: " << mc.check_time << "\trepair: " << mr.repair_time << std::endl;
-        //        mcp.modelCompare(m_Files[i], mesh, 0.01);
-    }
-    outFile.close();
-    return 0;
+//    std::vector<std::string> m_Files;
+//    std::string path = "E:\\Datasets\\3d\\123456789101112\\";
+//    GetAllFilesIncludeSubfolder(path, ".stl", m_Files);
+//
+//    std::ofstream outFile;
+//    outFile.open("E:\\Datasets\\repaired\\12.csv", std::ios::out);
+//    outFile << "File" << ',' << "Size" << ',' << "Defective" << ',' << "Check_Time" << ',' << "non_manifold_edge" << ',' << "non_manifold_vertex" << ','
+//            << "duplicated_vertex" << ',' << "polygon_orientation_reversed" << ',' << "number_of_connected_components" << ',' << "number_of_holes" << ','
+//            << "number_of_intersections" << ',' << "Repair_Time" << ',' << "repair_basic_time" << ',' << "read_file_time" << ',' << "repair_manifoldness_time"
+//            << ',' << "repair_borders_time" << ',' << "repair_holes_time" << ',' << "repair_self_intersect_time" << std::endl;
+//    //            << "repair_borders_time" << ',' << "repair_holes_time" << ',' << "repair_self_intersect_time" << ','
+//    //            << "simplification_time" << ',' << "compare_time" << ',' << "hausdorff_bounded_error_distance" << std::endl;
+//
+//    for (int i = 0; i < m_Files.size(); ++i) {
+//        int size = getFileSize((m_Files[i]));
+//
+//        std::cout << m_Files[i] << "\tsize: " << size << std::endl;
+//
+//        //        if (size == 150000000) {
+//        //            continue;
+//        //        }
+//        Mesh mesh;
+//        ModelCheck mc;
+//        ModelRepair mr;
+//        ModelSimplification ms;
+//        ModelCompare mcp;
+//
+//        //bool f = false;
+//        bool f = mc.checkTest(m_Files[i]);
+//        //        if (f) {
+//        //            std::string patten = "\\";
+//        //            std::string outFiles = "E:\\A\\3D_model1\\" + getFileName(m_Files[i], patten);
+//        //            std::cout << outFiles << std::endl;
+//        //            mesh = mr.repairModelMesh(m_Files[i], outFiles);
+//        ////            mesh = ms.modelSimplification(mesh, 0.2);
+//        //        }
+//        //        else {
+//        ////            mesh = ms.modelSimplification(m_Files[i], 0.2);
+//        //        }
+//        std::string patten = "\\";
+//        std::string outFiles = "E:\\Datasets\\repaired\\12\\" + getFileName(m_Files[i], patten);
+//        std::cout << outFiles << std::endl;
+//        mr.repairModel(m_Files[i], outFiles);
+//        //        mcp.modelCompare(m_Files[i], mesh, 0.01);
+//        outFile << outFiles << ',' << size << ',' << f << ',' << mc.check_time << ',' << mr.non_manifold_edge << ',' << mr.non_manifold_vertex << ','
+//                << mr.duplicated_vertex << ',' << mr.polygon_orientation_reversed << ',' << mr.number_of_connected_components << ',' << mr.number_of_holes
+//                << ',' << mr.number_of_intersections << ',' << mr.repair_time << ',' << mr.read_file_time << ',' << mr.repair_basic_time << ','
+//                << mr.repair_manifoldness_time << ',' << mr.repair_borders_time << ',' << mr.repair_holes_time << ',' << mr.repair_self_intersect_time
+//                << std::endl;
+//        //                << mr.repair_borders_time << ',' << mr.repair_holes_time << ',' << mr.repair_self_intersect_time << ','
+//        //                << ms.simplification_time << ',' << mcp.compare_time << ',' << mcp.hausdorff_bounded_error_distance << std::endl;
+//
+//        std::cout << "check: " << mc.check_time << "\trepair: " << mr.repair_time << std::endl;
+//        //        mcp.modelCompare(m_Files[i], mesh, 0.01);
+//    }
+//    outFile.close();
+//    return 0;
 }
 }  // namespace lunarmp

@@ -88,4 +88,4 @@ void logProgress(const char* type, int value, int maxValue, float percent) {
     }
 }
 
-}  // namespace tpp
+}  // namespace lunarmp

@@ -32,11 +32,9 @@ void ModelRepair::isOutwardMesh(Mesh& mesh) {
     }
 }
 
-bool ModelRepair::orientPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons)
-{
+bool ModelRepair::orientPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons) {
     log("Tring to consistently orient a soup of polygons in 3D space.\n");
-    Visitor vis(non_manifold_edge, non_manifold_vertex, duplicated_vertex,
-                vertex_id_in_polygon_replaced, polygon_orientation_reversed);
+    Visitor vis(non_manifold_edge, non_manifold_vertex, duplicated_vertex, vertex_id_in_polygon_replaced, polygon_orientation_reversed);
     bool is_producing_self_intersecting = PMP::orient_polygon_soup(points, polygons, NP::visitor(vis));
 
     log("Mesh has non_manifold_edge: %d\n", non_manifold_edge);
@@ -51,19 +49,13 @@ bool ModelRepair::orientPolygon(std::vector<K::Point_3>& points, std::vector<std
 void ModelRepair::repairPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh) {
     log("Start repairing polygon soup.\n");
     log("Before reparation, the soup has %d vertices and %d faces.\n", points.size(), polygons.size());
-    PMP::repair_polygon_soup(points,
-                             polygons,
-                             NP::erase_all_duplicates(false)
-                                 .require_same_orientation(false));
+    PMP::repair_polygon_soup(points, polygons, NP::erase_all_duplicates(false).require_same_orientation(false));
     log("After reparation, the soup has %d vertices and %d faces.\n", points.size(), polygons.size());
 
-    bool is_producing_self_intersecting = orientPolygon(points, polygons);
+    orientPolygon(points, polygons);
 
     log("Building a polygon mesh from a soup of polygons.\n");
-    PMP::polygon_soup_to_polygon_mesh(points,
-                                      polygons,
-                                      mesh,
-                                      NP::outward_orientation(true));
+    PMP::polygon_soup_to_polygon_mesh(points, polygons, mesh, NP::outward_orientation(true));
 
     if (CGAL::is_closed(mesh)) {
         log("mesh is cloesd, orients the connected components of tm to make it bound a volume.\n");
@@ -71,8 +63,7 @@ void ModelRepair::repairPolygon(std::vector<K::Point_3>& points, std::vector<std
     }
 }
 
-void ModelRepair::repair_manifoldness(Mesh& mesh)
-{
+void ModelRepair::repairManifoldness(Mesh& mesh) {
     const double bound = std::cos(0.75 * CGAL_PI);
     std::vector<face_descriptor> cc;
     face_descriptor fd = *faces(mesh).first;
@@ -82,53 +73,46 @@ void ModelRepair::repair_manifoldness(Mesh& mesh)
     typedef Mesh::Property_map<face_descriptor, bool> F_select_map;
     F_select_map fselect_map = mesh.add_property_map<face_descriptor, bool>("f:select", false).first;
 
-    PMP::connected_component(fd, mesh,
-                             boost::make_function_output_iterator(Put_true<F_select_map>(fselect_map)));
+    PMP::connected_component(fd, mesh, boost::make_function_output_iterator(Put_true<F_select_map>(fselect_map)));
 
-    Mesh::Property_map<face_descriptor, std::size_t> fccmap =
-        mesh.add_property_map<face_descriptor, std::size_t>("f:CC").first;
-    std::size_t num = PMP::connected_components(mesh, fccmap,
-                                                PMP::parameters::edge_is_constrained_map(Constraint<Mesh>(mesh, bound)));
+    Mesh::Property_map<face_descriptor, std::size_t> fccmap = mesh.add_property_map<face_descriptor, std::size_t>("f:CC").first;
+    std::size_t num = PMP::connected_components(mesh, fccmap, PMP::parameters::edge_is_constrained_map(Constraint<Mesh>(mesh, bound)));
     log("- The graph has %d connected components (face connectivity).\n", num);
 
-    typedef std::map<std::size_t/*index of CC*/, unsigned int/*nb*/> Components_size;
+    typedef std::map<std::size_t /*index of CC*/, unsigned int /*nb*/> Components_size;
 
     Components_size nb_per_cc;
     for (face_descriptor f : faces(mesh)) {
         nb_per_cc[fccmap[f]]++;
     }
     log("- We keep only components which have at least %d faces.\n", least_faces_per_component);
-    PMP::keep_large_connected_components(mesh,
-                                         least_faces_per_component,
-                                         PMP::parameters::edge_is_constrained_map(Constraint<Mesh>(mesh, bound)));
+    PMP::keep_large_connected_components(mesh, least_faces_per_component, PMP::parameters::edge_is_constrained_map(Constraint<Mesh>(mesh, bound)));
 }
 
 typedef CGAL::Halfedge_around_face_circulator<Mesh> Halfedge_around_facet_circulator;
-void detect_borders(Mesh& poly, std::vector<halfedge_descriptor>& border_reps)
-{
+void detect_borders(Mesh& poly, std::vector<halfedge_descriptor>& border_reps) {
     border_reps.clear();
     std::set<halfedge_descriptor> border_map;
-    for(halfedge_descriptor h :  halfedges(poly)){
-        if(face(h,poly)== boost::graph_traits<Mesh>::null_face() && border_map.find(h) == border_map.end()){
+    for (halfedge_descriptor h : halfedges(poly)) {
+        if (face(h, poly) == boost::graph_traits<Mesh>::null_face() && border_map.find(h) == border_map.end()) {
             border_reps.push_back(h);
-            Halfedge_around_facet_circulator hf_around_facet(h,poly), done(hf_around_facet);
+            Halfedge_around_facet_circulator hf_around_facet(h, poly), done(hf_around_facet);
             do {
                 bool insertion_ok = border_map.insert(*hf_around_facet).second;
                 assert(insertion_ok);
-            } while(++hf_around_facet != done);
+            } while (++hf_around_facet != done);
         }
     }
 }
 
 void ModelRepair::repairBorders(Mesh& mesh) {
     log("Start stitching borders.\n");
-    PMP::stitch_borders(mesh,
-                        NP::apply_per_connected_component(false));
+    PMP::stitch_borders(mesh, NP::apply_per_connected_component(false));
 }
 
 bool ModelRepair::isHoleMesh(Mesh tMesh) {
     unsigned int nb_holes = 0;
-    for (halfedge_descriptor h: tMesh.halfedges()) {
+    for (halfedge_descriptor h : tMesh.halfedges()) {
         if (CGAL::is_border(h, tMesh)) {
             return true;
         }
@@ -139,14 +123,11 @@ bool ModelRepair::isHoleMesh(Mesh tMesh) {
 void ModelRepair::repairHoleStepByStep(Mesh& tMesh) {
     unsigned int nb_holes = 0;
     int success_fill = 0;
-    for (halfedge_descriptor h: tMesh.halfedges()) {
+    for (halfedge_descriptor h : tMesh.halfedges()) {
         if (CGAL::is_border(h, tMesh)) {
             std::vector<face_descriptor> patch_faces;
             std::vector<vertex_descriptor> patch_vertices;
-            bool success = std::get<0>(PMP::triangulate_refine_and_fair_hole(tMesh,
-                                                                             h,
-                                                                             std::back_inserter(patch_faces),
-                                                                             std::back_inserter(patch_vertices)));
+            bool success = std::get<0>(PMP::triangulate_refine_and_fair_hole(tMesh, h, std::back_inserter(patch_faces), std::back_inserter(patch_vertices)));
             if (success) {
                 success_fill++;
             }
@@ -158,11 +139,11 @@ void ModelRepair::repairHoleStepByStep(Mesh& tMesh) {
 bool isSmallHole(halfedge_descriptor h, Mesh& mesh, double max_hole_diam, int max_num_hole_edges) {
     int num_hole_edges = 0;
     CGAL::Bbox_3 hole_bbox;
-    for (halfedge_descriptor hc: CGAL::halfedges_around_face(h, mesh)) {
+    for (halfedge_descriptor hc : CGAL::halfedges_around_face(h, mesh)) {
         const Point_3& p = mesh.point(target(hc, mesh));
         hole_bbox += p.bbox();
         ++num_hole_edges;
-        //Exit early, to avoid unnecessary traversal of large holes
+        // Exit early, to avoid unnecessary traversal of large holes
         if (num_hole_edges > max_num_hole_edges) {
             return false;
         }
@@ -187,17 +168,13 @@ void ModelRepair::repairHoleOfDiameter(Mesh& mesh) {
     // collect one halfedge per boundary cycle
     PMP::extract_boundary_cycles(mesh, std::back_inserter(border_cycles));
     int success_fill = 0;
-    for (halfedge_descriptor h: border_cycles) {
-        if (max_hole_diam > 0 && max_num_hole_edges > 0 &&
-            !isSmallHole(h, mesh, max_hole_diam, max_num_hole_edges)) {
+    for (halfedge_descriptor h : border_cycles) {
+        if (max_hole_diam > 0 && max_num_hole_edges > 0 && !isSmallHole(h, mesh, max_hole_diam, max_num_hole_edges)) {
             continue;
         }
         std::vector<face_descriptor> patch_facets;
         std::vector<vertex_descriptor> patch_vertices;
-        bool success = std::get<0>(PMP::triangulate_refine_and_fair_hole(mesh,
-                                                                         h,
-                                                                         std::back_inserter(patch_facets),
-                                                                         std::back_inserter(patch_vertices)));
+        bool success = std::get<0>(PMP::triangulate_refine_and_fair_hole(mesh, h, std::back_inserter(patch_facets), std::back_inserter(patch_vertices)));
 
         if (success) {
             success_fill++;
@@ -208,8 +185,7 @@ void ModelRepair::repairHoleOfDiameter(Mesh& mesh) {
 }
 
 bool ModelRepair::isSelfIntersect(Mesh& mesh) {
-    bool intersecting = PMP::does_self_intersect<CGAL::Parallel_if_available_tag>(mesh,
-                                                                                  CGAL::parameters::vertex_point_map(get(CGAL::vertex_point, mesh)));
+    bool intersecting = PMP::does_self_intersect<CGAL::Parallel_if_available_tag>(mesh, CGAL::parameters::vertex_point_map(get(CGAL::vertex_point, mesh)));
     if (intersecting) {
         log("There are self-intersections.\n");
         return true;
@@ -234,10 +210,7 @@ void ModelRepair::repairModel(std::vector<K::Point_3>& points, std::vector<std::
             log("The polygon soup is not a polygon mesh.\n");
         }
 
-        PMP::polygon_soup_to_polygon_mesh(points,
-                                          polygons,
-                                          mesh,
-                                          NP::outward_orientation(true));
+        PMP::polygon_soup_to_polygon_mesh(points, polygons, mesh, NP::outward_orientation(true));
 
         if (CGAL::is_closed(mesh)) {
             PMP::orient_to_bound_a_volume(mesh, NP::outward_orientation(true));
@@ -250,11 +223,10 @@ void ModelRepair::repairModel(std::vector<K::Point_3>& points, std::vector<std::
 
     if (non_manifold_edge || non_manifold_vertex) {
         t.reset();
-        repair_manifoldness(mesh);
+        repairManifoldness(mesh);
         repair_manifoldness_time = t.time();
         t.reset();
     }
-
 
     if (isHoleMesh(mesh)) {
         t.reset();
@@ -273,7 +245,6 @@ void ModelRepair::repairModel(std::vector<K::Point_3>& points, std::vector<std::
         repair_self_intersect_time = t.time();
         t.reset();
     }
-
 }
 
 void ModelRepair::repairModel(std::string input_file, std::string output_file) {
@@ -303,6 +274,6 @@ void ModelRepair::test() {
     writePolygon(output_file, mesh);
 }
 
-}
+}  // namespace lunarmp
 
-#endif // LUNARMP_POLYGONMESHREPAIR_H
+#endif  // LUNARMP_POLYGONMESHREPAIR_H

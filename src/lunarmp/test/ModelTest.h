@@ -5,12 +5,12 @@
 #ifndef LUNARMP_SRC_LUNARMP_MODEL_MODELTEST_H_
 #define LUNARMP_SRC_LUNARMP_MODEL_MODELTEST_H_
 
-#include <io.h>
+#include <string>
 
-#include "ModelCheck.h"
-#include "ModelCompare.h"
-#include "ModelRepair.h"
-#include "ModelSimplification.h"
+#include "../model/ModelCheck.h"
+#include "../model/ModelCompare.h"
+#include "../model/ModelRepair.h"
+#include "../model/ModelSimplification.h"
 
 namespace lunarmp {
 
