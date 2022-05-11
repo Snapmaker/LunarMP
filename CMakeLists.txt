@@ -28,14 +28,19 @@ set(PROJECT_SRCS
 
 add_library(_LunarMP STATIC ${PROJECT_SRCS})
 
-target_include_directories(_LunarMP PUBLIC "C:/msys64/mingw64/include/")
+## MPFR
+#find_package(MPFR REQUIRED)
+#
+## GMP
+#find_package(GMP REQUIRED)
+
+# EIGEN3
+find_package(EIGEN3 REQUIRED)
+target_include_directories(_LunarMP PUBLIC ${EIGEN3_INCLUDE_DIR})
 
 # CGAL and its components
 find_package(CGAL REQUIRED)
 target_include_directories(_LunarMP PUBLIC ${CGAL_INCLUDE_DIRS})
-
-find_package(EIGEN3 REQUIRED)
-target_include_directories(_LunarMP PUBLIC ${EIGEN3_INCLUDE_DIR})
 
 # Boost and its components
 find_package(Boost REQUIRED)

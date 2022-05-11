@@ -21,4 +21,4 @@ fi
 cd ${DEPS_DIR} || exit
 
 ${CMAKE_DIR} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -G "${CodeBlocks}" -S ./ -B ${BUILD_DIR}
-${CMAKE_DIR} --build ./${BUILD_DIR} --target deps -- -j 12
+${CMAKE_DIR} --build ./${BUILD_DIR} --target CGAL -- -j 4
