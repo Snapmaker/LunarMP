@@ -37,7 +37,7 @@ add_library(_LunarMP STATIC ${PROJECT_SRCS})
 #find_package(GMP REQUIRED)
 
 # EIGEN3
-find_package(EIGEN3 REQUIRED)
+find_package(Eigen3 REQUIRED)
 target_include_directories(_LunarMP PUBLIC ${EIGEN3_INCLUDE_DIR})
 
 # CGAL and its components
