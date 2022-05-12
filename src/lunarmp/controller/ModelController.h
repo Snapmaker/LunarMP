@@ -8,6 +8,9 @@ namespace lunarmp {
 class ModelController {
   public:
     void repair(DataGroup& data_group);
+    void check(DataGroup& data_group);
+    void simplification(DataGroup& data_group);
+    void compare(DataGroup& data_group);
 };
 
 }  // namespace lunarmp
