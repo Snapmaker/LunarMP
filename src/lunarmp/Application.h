@@ -88,6 +88,12 @@ class Application {
 
     void modelRepair();
 
+    void modelSimplify();
+
+    void modelCheck();
+
+    void modelCompare();
+
   private:
     /*
      * \brief The number of arguments that the application was called with.
