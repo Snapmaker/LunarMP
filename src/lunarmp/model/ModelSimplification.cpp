@@ -128,8 +128,18 @@ void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double Edg
 void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, int type, double machine_box, double threshold){
     Mesh mesh;
     readFile(input_file, mesh);
-    autoSimplify(mesh, machine_box, threshold);
-    CGAL::IO::write_polygon_mesh(output_file, mesh, CGAL::parameters::stream_precision(17));
+
+    if (type == 1) {
+        autoSimplify(mesh, machine_box, threshold);
+    }
+    else if (type == 2){
+        edgeCollapseAllShortEdges(mesh, threshold);
+    }
+    else {
+        // Error: None Type parameter
+    }
+
+    CGAL::IO::write_polygon_mesh(output_file, mesh, NP::stream_precision(17));
 }
 
 }

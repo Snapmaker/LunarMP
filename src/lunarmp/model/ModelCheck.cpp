@@ -39,7 +39,7 @@ void ModelCheck::checkIntersect(Mesh mesh) {
 }
 
 void ModelCheck::checkModel(std::string input_file) {
-    std::vector<K::Point_3> points;
+    std::vector<Point_3> points;
     std::vector<std::vector<std::size_t>> polygons;
     Mesh mesh;
 
