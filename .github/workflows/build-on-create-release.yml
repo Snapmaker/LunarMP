@@ -172,7 +172,7 @@ jobs:
           brew install cgal
 
       - run: mkdir build && cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" -S ./ -B build
-      - run: cmake --build ./build --target LunarMP -- -j 12
+      - run: cmake --build ./build --target LunarMP -- -j 4
       - run: ./build/LunarMP version && ./build/LunarMP ptest
       - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
