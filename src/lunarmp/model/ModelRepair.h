@@ -77,7 +77,7 @@ class ModelRepair {
      * \param polygons each element in the range describes a polygon using the indices of the vertices.
      * \param mesh model mesh
      */
-    bool readPolygonSoup(std::string file_name, std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons);
+    bool readPolygonSoup(std::string file_name, std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons);
 
     /*!
      * \brief Writes a polygon mesh in a file.
@@ -103,12 +103,12 @@ class ModelRepair {
      * \param polygons each element in the range describes a polygon using the indices of the vertices.
      * \param mesh model mesh
      */
-    void repairPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh);
+    void repairPolygon(std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh);
 
     /*!
      * \brief Orient polygon soup.
      */
-    bool orientPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons);
+    bool orientPolygon(std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons);
 
     /*!
      * \brief Judge whether the normal vectors of the mesh face outwards uniformly.
@@ -168,7 +168,7 @@ class ModelRepair {
     /*!
      * \brief Comprehensive repair interface.
      */
-    void repairModel(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh);
+    void repairModel(std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh);
 
     /*!
      * \brief Model repair interface.

@@ -71,6 +71,33 @@ void Application::modelRepair() {
     communication = new CommandLine(arguments);
 }
 
+void Application::modelSimplify() {
+    std::vector<std::string> arguments;
+    for (size_t argument_index = 0; argument_index < argc; argument_index++) {
+        arguments.emplace_back(argv[argument_index]);
+    }
+
+    communication = new CommandLine(arguments);
+}
+
+void Application::modelCheck() {
+    std::vector<std::string> arguments;
+    for (size_t argument_index = 0; argument_index < argc; argument_index++) {
+        arguments.emplace_back(argv[argument_index]);
+    }
+
+    communication = new CommandLine(arguments);
+}
+
+void Application::modelCompare() {
+    std::vector<std::string> arguments;
+    for (size_t argument_index = 0; argument_index < argc; argument_index++) {
+        arguments.emplace_back(argv[argument_index]);
+    }
+
+    communication = new CommandLine(arguments);
+}
+
 void Application::run(const size_t argc, char** argv) {
     this->argc = argc;
     this->argv = argv;
@@ -98,6 +125,12 @@ void Application::run(const size_t argc, char** argv) {
     }
     if (stringcasecompare(argv[1], "modelrepair") == SUCCESS) {
         modelRepair();
+    } else if (stringcasecompare(argv[1], "modelsimplify") == SUCCESS) {
+        modelSimplify();
+    } else if (stringcasecompare(argv[1], "modelcheck") == SUCCESS) {
+        modelCheck();
+    } else if (stringcasecompare(argv[1], "modelcompare") == SUCCESS) {
+        modelCompare();
     } else if (stringcasecompare(argv[1], "help") == 0) {
         //        printHelp();
     } else if (stringcasecompare(argv[1], "version") == 0) {

@@ -26,6 +26,15 @@ void TaskWorker::runNext() {
         case str2int("modelrepair"):
             m_model_controller.repair(task.data_group);
             break;
+        case str2int("modelsimplify"):
+            m_model_controller.simplification(task.data_group);
+            break;
+        case str2int("modelcheck"):
+            m_model_controller.check(task.data_group);
+            break;
+        case str2int("modelcompare"):
+            m_model_controller.compare(task.data_group);
+            break;
     }
 }
 

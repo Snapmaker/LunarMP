@@ -9,7 +9,7 @@
 
 namespace lunarmp {
 
-bool ModelRepair::readPolygonSoup(std::string file_name, std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons) {
+bool ModelRepair::readPolygonSoup(std::string file_name, std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons) {
     if (!CGAL::IO::read_polygon_soup(file_name, points, polygons) || points.empty()) {
         logError("Cannot open file.\n");
         return EXIT_FAILURE;
@@ -32,7 +32,7 @@ void ModelRepair::isOutwardMesh(Mesh& mesh) {
     }
 }
 
-bool ModelRepair::orientPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons) {
+bool ModelRepair::orientPolygon(std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons) {
     log("Tring to consistently orient a soup of polygons in 3D space.\n");
     Visitor vis(non_manifold_edge, non_manifold_vertex, duplicated_vertex, vertex_id_in_polygon_replaced, polygon_orientation_reversed);
     bool is_producing_self_intersecting = PMP::orient_polygon_soup(points, polygons, NP::visitor(vis));
@@ -46,7 +46,7 @@ bool ModelRepair::orientPolygon(std::vector<K::Point_3>& points, std::vector<std
     return is_producing_self_intersecting;
 }
 
-void ModelRepair::repairPolygon(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh) {
+void ModelRepair::repairPolygon(std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh) {
     log("Start repairing polygon soup.\n");
     log("Before reparation, the soup has %d vertices and %d faces.\n", points.size(), polygons.size());
     PMP::repair_polygon_soup(points, polygons, NP::erase_all_duplicates(false).require_same_orientation(false));
@@ -76,7 +76,7 @@ void ModelRepair::repairManifoldness(Mesh& mesh) {
     PMP::connected_component(fd, mesh, boost::make_function_output_iterator(Put_true<F_select_map>(fselect_map)));
 
     Mesh::Property_map<face_descriptor, std::size_t> fccmap = mesh.add_property_map<face_descriptor, std::size_t>("f:CC").first;
-    std::size_t num = PMP::connected_components(mesh, fccmap, PMP::parameters::edge_is_constrained_map(Constraint<Mesh>(mesh, bound)));
+    std::size_t num = PMP::connected_components(mesh, fccmap, NP::edge_is_constrained_map(Constraint<Mesh>(mesh, bound)));
     log("- The graph has %d connected components (face connectivity).\n", num);
 
     typedef std::map<std::size_t /*index of CC*/, unsigned int /*nb*/> Components_size;
@@ -86,7 +86,7 @@ void ModelRepair::repairManifoldness(Mesh& mesh) {
         nb_per_cc[fccmap[f]]++;
     }
     log("- We keep only components which have at least %d faces.\n", least_faces_per_component);
-    PMP::keep_large_connected_components(mesh, least_faces_per_component, PMP::parameters::edge_is_constrained_map(Constraint<Mesh>(mesh, bound)));
+    PMP::keep_large_connected_components(mesh, least_faces_per_component, NP::edge_is_constrained_map(Constraint<Mesh>(mesh, bound)));
 }
 
 typedef CGAL::Halfedge_around_face_circulator<Mesh> Halfedge_around_facet_circulator;
@@ -185,7 +185,7 @@ void ModelRepair::repairHoleOfDiameter(Mesh& mesh) {
 }
 
 bool ModelRepair::isSelfIntersect(Mesh& mesh) {
-    bool intersecting = PMP::does_self_intersect<CGAL::Parallel_if_available_tag>(mesh, CGAL::parameters::vertex_point_map(get(CGAL::vertex_point, mesh)));
+    bool intersecting = PMP::does_self_intersect<CGAL::Parallel_if_available_tag>(mesh, NP::vertex_point_map(get(CGAL::vertex_point, mesh)));
     if (intersecting) {
         log("There are self-intersections.\n");
         return true;
@@ -202,7 +202,7 @@ void ModelRepair::repairSelfIntersect(Mesh& mesh) {
     log("%d pairs of triangles intersect.\n", intersected_tris.size());
 }
 
-void ModelRepair::repairModel(std::vector<K::Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh) {
+void ModelRepair::repairModel(std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh) {
     t.reset();
     if (PMP::is_polygon_soup_a_polygon_mesh(polygons)) {
         log("The polygon soup is a polygon mesh.\n");
@@ -248,7 +248,7 @@ void ModelRepair::repairModel(std::vector<K::Point_3>& points, std::vector<std::
 }
 
 void ModelRepair::repairModel(std::string input_file, std::string output_file) {
-    std::vector<K::Point_3> points;
+    std::vector<Point_3> points;
     std::vector<std::vector<std::size_t> > polygons;
     Mesh mesh;
     t.start();
@@ -263,7 +263,7 @@ void ModelRepair::repairModel(std::string input_file, std::string output_file) {
 void ModelRepair::test() {
     const std::string file_name = CGAL::data_file_path("E:/Datasets/modelrepair/078.stl");
 
-    std::vector<K::Point_3> points;
+    std::vector<Point_3> points;
     std::vector<std::vector<std::size_t> > polygons;
     Mesh mesh;
     readPolygonSoup(file_name, points, polygons);

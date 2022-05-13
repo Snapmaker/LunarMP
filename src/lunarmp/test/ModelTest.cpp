@@ -109,37 +109,37 @@ std::string getFileName(std::string str, std::string pattern) {
     return result[result.size() - 1];
 }
 int ModelTest::simpfyOutput(double mSize) {
-    std::vector<std::string> m_Files;
-    std::string path = "E:\\Datasets\\3d\\123456789101112\\";
-    GetAllFilesIncludeSubfolder(path, ".stl", m_Files);
-    std::ofstream outFile;
-    outFile.open("E:\\C\\12.csv", std::ios::out);
-    outFile << "File" << ',' << "Size" << ',' << "simplification_time" << ',' << "Edges_0" << ',' << "Faces_0" << ',' << "Points_0" << ',' << "Edges_1" << ','
-            << "Faces_1" << ',' << "Points_1" << ',' << "compare_time" << ',' << "hausdorff_bounded_error_distance" << ',' << std::endl;
-
-    for (int i = 0; i < m_Files.size(); ++i) {
-        int size = getFileSize((m_Files[i]));
-
-        std::cout << m_Files[i] << "\tsize: " << size << std::endl;
-
-        ModelSimplification ms;
-        ModelCompare mcp;
-        std::string patten = "\\";
-        std::string outFiles = "E:\\C\\" + getFileName(m_Files[i], patten);
-
-        Mesh mesh, mesh2;
-
-        //ms.readFile(m_Files[i], mesh);
-        //        ms.initSetting(mSize);
-        ms.modelSimplification(m_Files[i], outFiles, 1, 300, 0.08);
-        /*if (ms.remove_edge > 0) {
-            mcp.modelCompare(mesh, mesh2, 0.01);
-        }*/
-        outFile << m_Files[i] << ',' << size << ',' << ms.simplification_time << ',' << mesh.number_of_halfedges() / 2 << ',' << mesh.number_of_faces() << ','
-                << mesh.number_of_vertices() << ',' << mesh2.number_of_halfedges() / 2 << ',' << mesh2.number_of_faces() << ',' << mesh2.number_of_vertices()
-                << ',' << mcp.compare_time << ',' << mcp.hausdorff_bounded_error_distance << ',' << std::endl;
-    }
-    outFile.close();
+//    std::vector<std::string> m_Files;
+//    std::string path = "E:\\Datasets\\3d\\123456789101112\\";
+//    GetAllFilesIncludeSubfolder(path, ".stl", m_Files);
+//    std::ofstream outFile;
+//    outFile.open("E:\\C\\12.csv", std::ios::out);
+//    outFile << "File" << ',' << "Size" << ',' << "simplification_time" << ',' << "Edges_0" << ',' << "Faces_0" << ',' << "Points_0" << ',' << "Edges_1" << ','
+//            << "Faces_1" << ',' << "Points_1" << ',' << "compare_time" << ',' << "hausdorff_bounded_error_distance" << ',' << std::endl;
+//
+//    for (int i = 0; i < m_Files.size(); ++i) {
+//        int size = getFileSize((m_Files[i]));
+//
+//        std::cout << m_Files[i] << "\tsize: " << size << std::endl;
+//
+//        ModelSimplification ms;
+//        ModelCompare mcp;
+//        std::string patten = "\\";
+//        std::string outFiles = "E:\\C\\" + getFileName(m_Files[i], patten);
+//
+//        Mesh mesh, mesh2;
+//
+//        //ms.readFile(m_Files[i], mesh);
+//        //        ms.initSetting(mSize);
+//        ms.modelSimplification(m_Files[i], outFiles, 1, 300, 0.08);
+//        /*if (ms.remove_edge > 0) {
+//            mcp.modelCompare(mesh, mesh2, 0.01);
+//        }*/
+//        outFile << m_Files[i] << ',' << size << ',' << ms.simplification_time << ',' << mesh.number_of_halfedges() / 2 << ',' << mesh.number_of_faces() << ','
+//                << mesh.number_of_vertices() << ',' << mesh2.number_of_halfedges() / 2 << ',' << mesh2.number_of_faces() << ',' << mesh2.number_of_vertices()
+//                << ',' << mcp.compare_time << ',' << mcp.hausdorff_bounded_error_distance << ',' << std::endl;
+//    }
+//    outFile.close();
     return 0;
 }
 
