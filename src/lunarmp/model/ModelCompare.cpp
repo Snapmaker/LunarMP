@@ -23,10 +23,11 @@ void ModelCompare::boundedErrorSymmetricHausdorffDistance(Mesh& mesh1, Mesh& mes
     log("Approximated Hausdorff Bounded Error Distance: %lf.\n", hausdorff_bounded_error_distance);
 }
 
-void ModelCompare::modelCompare(std::string baseFile, Mesh& mesh2, double error_bound)
+void ModelCompare::modelCompare(std::string baseFile, std::string compareFile, double error_bound)
 {
-    Mesh base;
+    Mesh base, mesh2;
     readFile(baseFile, base);
+    readFile(compareFile, mesh2);
 
     CGAL::Timer t;
     t.start();

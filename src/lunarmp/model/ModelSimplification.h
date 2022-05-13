@@ -101,11 +101,10 @@ class ModelSimplification {
      * \param input_file the name of input file.
      * \param output_file the name of the output file.
      * \param type Simplified strategy.
-     * \param machine_box Print space range.
-     * \param threshold The minimum side length of a triangle.
+     * \param stop_predicate_threshold The minimum side length of a triangle.
      *
      */
-    void modelSimplification(std::string input_file, std::string output_file, int type, double machine_box, double threshold);
+    void modelSimplification(std::string input_file, std::string output_file, int type, double stop_predicate_threshold);
 
 };
 

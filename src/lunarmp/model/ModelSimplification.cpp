@@ -125,15 +125,15 @@ void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double Edg
 
 }
 
-void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, int type, double machine_box, double threshold){
+void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, int type, double stop_predicate_threshold){
     Mesh mesh;
     readFile(input_file, mesh);
 
     if (type == 1) {
-        autoSimplify(mesh, machine_box, threshold);
+        autoSimplify(mesh, stop_predicate_threshold);
     }
     else if (type == 2){
-        edgeCollapseAllShortEdges(mesh, threshold);
+        edgeCollapseAllShortEdges(mesh, stop_predicate_threshold);
     }
     else {
         // Error: None Type parameter

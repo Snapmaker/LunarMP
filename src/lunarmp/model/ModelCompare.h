@@ -56,7 +56,7 @@ class ModelCompare {
      * \param error_bound a maximum bound by which the Hausdorff distance estimate is allowed to deviate from the actual Hausdorff distance.
      *
      */
-    void modelCompare(std::string baseFile, Mesh& mesh2, double error_bound);
+    void modelCompare(std::string baseFile, std::string compareFile, double error_bound);
 
     /*!
      * \brief Compare model
