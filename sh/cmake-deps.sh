@@ -3,12 +3,12 @@
 CMAKE_DIR=cmake
 BUILD_TYPE=Release
 BUILD_DIR=build
-CodeBlocks="CodeBlocks - MinGW Makefiles"
+CodeBlocks="'CodeBlocks - MinGW Makefiles'"
 
 if [ "$(uname)" == "Darwin" ]; then
-  CodeBlocks="CodeBlocks - Unix Makefiles"
+  CodeBlocks="'CodeBlocks - Unix Makefiles'"
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-  CodeBlocks="CodeBlocks - Unix Makefiles"
+  CodeBlocks="'CodeBlocks - Unix Makefiles'"
 fi
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"

@@ -30,11 +30,11 @@ set(PROJECT_SRCS
 
 add_library(_LunarMP STATIC ${PROJECT_SRCS})
 
-## MPFR
-#find_package(MPFR REQUIRED)
+# MPFR
+find_package(MPFR REQUIRED)
 #
-## GMP
-#find_package(GMP REQUIRED)
+# GMP
+find_package(GMP REQUIRED)
 
 # EIGEN3
 find_package(Eigen3 REQUIRED)
