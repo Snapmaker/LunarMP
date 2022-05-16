@@ -25,18 +25,18 @@ typedef typename SMS::GarlandHeckbert_policies<Mesh, K>            GH_policies;
 typedef typename GH_policies::Get_cost                             GH_cost;
 typedef typename GH_policies::Get_placement                        GH_placement;
 typedef SMS::Bounded_normal_change_placement<GH_placement>         Bounded_GH_placement;
-void ModelSimplification::edgeCollapseGarlandHeckbert(Mesh& mesh, double count_ratio_stop = 0.2)
+void ModelSimplification::edgeCollapseGarlandHeckbert(Mesh& mesh, double count_ratio_threshold)
 {
     CGAL::Timer t;
     t.start();
-    SMS::Count_ratio_stop_predicate<Mesh> stop(count_ratio_stop);
+    SMS::Count_ratio_stop_predicate<Mesh> stop(count_ratio_threshold);
 
     GH_policies gh_policies(mesh);
     const GH_cost& gh_cost = gh_policies.get_cost();
     const GH_placement& gh_placement = gh_policies.get_placement();
     Bounded_GH_placement placement(gh_placement);
 
-    log("Collapsing edges of mesh, aiming for %.2lf % of the input edges...\n", count_ratio_stop);
+    log("Collapsing edges of mesh, aiming for %.2lf % of the input edges...\n", count_ratio_threshold);
     remove_edge = SMS::edge_collapse(mesh, stop,
                                      NP::get_cost(gh_cost)
                                          .get_placement(placement));
@@ -47,12 +47,12 @@ void ModelSimplification::edgeCollapseGarlandHeckbert(Mesh& mesh, double count_r
 
 }
 
-void ModelSimplification::edgeCollapseAllShortEdges(Mesh& mesh, double threshold = 0.08)
+void ModelSimplification::edgeCollapseAllShortEdges(Mesh& mesh, double edge_length_threshold)
 {
     CGAL::Timer t;
     t.start();
     remove_edge = SMS::edge_collapse(mesh,
-                                     SMS::Edge_length_stop_predicate<double>(threshold),
+                                     SMS::Edge_length_stop_predicate<double>(edge_length_threshold),
                                      NP::get_cost(SMS::Edge_length_cost <Mesh>())
                                          .get_placement(SMS::Midpoint_placement<Mesh>()));
 
@@ -62,11 +62,11 @@ void ModelSimplification::edgeCollapseAllShortEdges(Mesh& mesh, double threshold
     log("Finished.\n Removed edges: %d, final edges: %d.\n", remove_edge, mesh.number_of_edges());
 }
 
-void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double Edges_limit = 10000)
+void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double edge_count_threshold)
 {
     CGAL::Timer t;
     t.start();
-    SMS::Count_stop_predicate<Mesh> stop(Edges_limit);
+    SMS::Count_stop_predicate<Mesh> stop(edge_count_threshold);
     typedef SMS::LindstromTurk_placement<Mesh> Placement;
     SMS::Bounded_normal_change_filter<> filter;
     SMS::edge_collapse(mesh, stop,
@@ -87,23 +87,23 @@ void ModelSimplification::modelSimplification(std::string input_file, std::strin
 
     readFile(input_file, mesh);
 
-    SIMPLIFYMethod type = data_group.settings.get<SIMPLIFYMethod>("simplify_type");
+    SimplifyType type = data_group.settings.get<SimplifyType>("simplify_type");
 
     switch(type)
     {
-        case SIMPLIFYMethod::edge_length_stop:
+        case SimplifyType::edge_length_stop:
         {
             auto edge_length_threshold = data_group.settings.get<double>("edge_length_threshold");
             edgeCollapseAllShortEdges(mesh, edge_length_threshold);
             break;
         }
-        case SIMPLIFYMethod::edge_count_stop:
+        case SimplifyType::edge_count_stop:
         {
             auto edge_count_threshold = data_group.settings.get<double>("edge_count_threshold");
             edgeCollapseBoundedNormalChange(mesh, edge_count_threshold);
             break;
         }
-        case SIMPLIFYMethod::edge_ratio_stop:
+        case SimplifyType::edge_ratio_stop:
         {
             auto edge_ratio_threshold = data_group.settings.get<double>("edge_ratio_threshold");
             edgeCollapseGarlandHeckbert(mesh, edge_ratio_threshold);

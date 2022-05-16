@@ -34,7 +34,7 @@ typedef CGAL::Bbox_3                                               Bbox_3;
 namespace SMS = CGAL::Surface_mesh_simplification;
 
 namespace lunarmp {
-enum class SIMPLIFYMethod
+enum class SimplifyType
 {
     edge_length_stop,
     edge_count_stop,
@@ -62,7 +62,7 @@ class ModelSimplification {
      * \param count_ratio_stop
      *
      */
-    void edgeCollapseGarlandHeckbert(Mesh& mesh, double count_ratio_stop);
+    void edgeCollapseGarlandHeckbert(Mesh& mesh, double count_ratio_threshold);
 
     /*!
      * \brief Model simplification based on "Edge_length_stop_predicate" strategy
@@ -71,7 +71,7 @@ class ModelSimplification {
      * \param edge_length_limit The limit on the length of the sides of a triangle.
      *
      */
-    void edgeCollapseAllShortEdges(Mesh& mesh, double edge_length_limit);
+    void edgeCollapseAllShortEdges(Mesh& mesh, double edge_length_threshold);
 
     /*!
      * \brief Model simplification based on "Edge_length_stop_predicate" strategy
@@ -80,7 +80,7 @@ class ModelSimplification {
      * \param edge_length_length The limit on the length of the sides of a triangle.
      *
      */
-    void edgeCollapseBoundedNormalChange(Mesh& mesh, double edge_length_limit);
+    void edgeCollapseBoundedNormalChange(Mesh& mesh, double edge_count_threshold);
 
     /*!
      * \brief Simplify model
