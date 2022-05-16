@@ -47,50 +47,6 @@ void ModelSimplification::edgeCollapseGarlandHeckbert(Mesh& mesh, double count_r
 
 }
 
-Bbox_3 bbox(face_descriptor fd, const Mesh& p)
-{
-    halfedge_descriptor hd = halfedge(fd, p);
-    Bbox_3 res = p.point(source(hd, p)).bbox();
-    res += p.point(target(hd, p)).bbox();
-    res += p.point(target(next(hd, p), p)).bbox();
-
-    return res;
-}
-
-double ModelSimplification::getDelta(Mesh mesh, double machineBox)
-{
-    CGAL::Bbox_3 surface_box;
-    for (face_descriptor fd : faces(mesh)) {
-        surface_box += bbox(fd, mesh);
-    }
-
-    double meshBox[4];
-    meshBox[0] = fabs(surface_box.xmax() - surface_box.xmin());
-    meshBox[1] = fabs(surface_box.ymax() - surface_box.ymin());
-    meshBox[2] = fabs(surface_box.zmax() - surface_box.zmin());
-
-    double delta = std::max(meshBox[0], std::max(meshBox[1], meshBox[2]));
-
-    return delta / machineBox;
-}
-
-void ModelSimplification::autoSimplify(Mesh& mesh, double machine_box, double threshold = 0.08)
-{
-    double delta = getDelta(mesh, machine_box);
-    std::cout << "delta: " << delta << std::endl;
-
-    CGAL::Timer t;
-    t.start();
-    remove_edge = SMS::edge_collapse(mesh,
-                                     SMS::Edge_length_stop_predicate<double>(threshold * delta),
-                                     NP::get_cost(SMS::Edge_length_cost <Mesh>())
-                                         .get_placement(SMS::Midpoint_placement<Mesh>()));
-
-    simplification_time = t.time();
-    log("Time elapsed: %f s.\n", simplification_time);
-    log("Finished.\n Removed edges: %d, final edges: %d.\n", remove_edge, mesh.number_of_edges());
-}
-
 void ModelSimplification::edgeCollapseAllShortEdges(Mesh& mesh, double threshold = 0.08)
 {
     CGAL::Timer t;
@@ -125,18 +81,18 @@ void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double Edg
 
 }
 
-void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, int type, double stop_predicate_threshold){
+void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, std::string type, double stop_predicate_threshold){
     Mesh mesh;
     readFile(input_file, mesh);
 
-    if (type == 1) {
-        autoSimplify(mesh, stop_predicate_threshold);
-    }
-    else if (type == 2){
+    if (type == "edge_length_stop") {
         edgeCollapseAllShortEdges(mesh, stop_predicate_threshold);
     }
-    else {
-        // Error: None Type parameter
+    else if (type == "edge_count_stop") {
+        edgeCollapseBoundedNormalChange(mesh, stop_predicate_threshold);
+    }
+    else if (type == "edge_ratio_stop") {
+        edgeCollapseGarlandHeckbert(mesh, stop_predicate_threshold);
     }
 
     CGAL::IO::write_polygon_mesh(output_file, mesh, NP::stream_precision(17));

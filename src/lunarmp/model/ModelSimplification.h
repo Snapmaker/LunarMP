@@ -77,25 +77,6 @@ class ModelSimplification {
     void edgeCollapseBoundedNormalChange(Mesh& mesh, double edge_length_limit);
 
     /*!
-     * \brief Calculate scaling factor
-     *
-     * \param mesh A triangular mesh that needs to be simplified.
-     * \param machineBox
-     *
-     */
-    double getDelta(Mesh mesh, double machineBox);
-
-    /*!
-     * \brief Model simplification based on "Edge_length_stop_predicate" strategy
-     *
-     * \param mesh A triangular mesh that needs to be simplified.
-     * \param machine_box Print space range.
-     * \param threshold The minimum side length of a triangle.
-     *
-     */
-    void autoSimplify(Mesh& mesh, double machine_box, double threshold);
-
-    /*!
      * \brief Simplify model
      *
      * \param input_file the name of input file.
@@ -104,7 +85,7 @@ class ModelSimplification {
      * \param stop_predicate_threshold The minimum side length of a triangle.
      *
      */
-    void modelSimplification(std::string input_file, std::string output_file, int type, double stop_predicate_threshold);
+    void modelSimplification(std::string input_file, std::string output_file, std::string type, double stop_predicate_threshold);
 
 };
 
