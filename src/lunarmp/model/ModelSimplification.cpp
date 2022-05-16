@@ -4,6 +4,8 @@
 
 #include "ModelSimplification.h"
 
+#include "../utils/Enums.h"
+
 namespace lunarmp {
 
 bool ModelSimplification::readFile(std::string input_file, Mesh& mesh) {
@@ -81,9 +83,8 @@ void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double edg
 
 }
 
-void ModelSimplification::modelSimplification(std::string input_file, std::string output_file){
+void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, DataGroup data_group){
     Mesh mesh;
-    DataGroup data_group;
 
     readFile(input_file, mesh);
 
@@ -91,19 +92,19 @@ void ModelSimplification::modelSimplification(std::string input_file, std::strin
 
     switch(type)
     {
-        case SimplifyType::edge_length_stop:
+        case SimplifyType::EDGE_LENGTH_STOP:
         {
             auto edge_length_threshold = data_group.settings.get<double>("edge_length_threshold");
             edgeCollapseAllShortEdges(mesh, edge_length_threshold);
             break;
         }
-        case SimplifyType::edge_count_stop:
+        case SimplifyType::EDGE_COUNT_STOP:
         {
             auto edge_count_threshold = data_group.settings.get<double>("edge_count_threshold");
             edgeCollapseBoundedNormalChange(mesh, edge_count_threshold);
             break;
         }
-        case SimplifyType::edge_ratio_stop:
+        case SimplifyType::EDGE_RATIO_STOP:
         {
             auto edge_ratio_threshold = data_group.settings.get<double>("edge_ratio_threshold");
             edgeCollapseGarlandHeckbert(mesh, edge_ratio_threshold);

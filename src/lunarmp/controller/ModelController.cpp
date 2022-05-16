@@ -29,7 +29,7 @@ void ModelController::simplification(DataGroup& data_group) {
     auto output_path = data_group.settings.get<std::string>("output_path");
 
     ModelSimplification model_simplification;
-    model_simplification.modelSimplification(input_path, output_path);
+    model_simplification.modelSimplification(input_path, output_path, data_group);
 }
 
 
