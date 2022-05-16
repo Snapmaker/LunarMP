@@ -7,151 +7,154 @@ on:
 #on: push
 
 jobs:
-#  build-macos:
-#    name: Build MacOS Packages
-#
-#    #macos-10.15
-#    runs-on: macos-10.15
-#
-#    steps:
-#      - name: Checkout Code
-#        uses: actions/checkout@v2
-#        with:
-#          token: ${{ secrets.MY_TOKEN }}
-#          submodules: 'recursive'
-#
-#      - name: install deps
-#        run: |
-#          brew install gmp
-#          brew install mpfr
-#          brew install boost
-#          brew install eigen
+  build-macos:
+    name: Build MacOS Packages
+
+    #macos-10.15
+    runs-on: macos-10.15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.MY_TOKEN }}
+          submodules: 'recursive'
+
+      - name: install deps
+        run: |
+          brew install gmp
+          brew install mpfr
+          brew install boost
+          brew install eigen
 #          brew install cgal
 #      - run: mkdir build && cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" -S ./ -B build
 #      - run: cmake --build ./build --target LunarMP -- -j 4
-#      #      - name: build for deps
-#      #        run: sh sh/cmake-deps.sh
-#      #      - name: build for LunarMP
-#      #        run: sh sh/cmake-build.sh
-#      - run: ./build/LunarMP version && ./build/LunarMP ptest
-#      - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
-#
-#      - name: import apple code-signing
-#        uses: apple-actions/import-codesign-certs@v1
-#        with:
-#          p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
-#          p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
-#
-#      - run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
-#
-#      - name: Zip output
-#        uses: thedoctor0/zip-release@master
-#        with:
-#          type: zip
-#          filename: LunarMP-mac.zip
-#          directory: ./
-#          path: ./output
-#
-#      - name: Upload Release Asset - Linux Binary file
-#        id: upload-release-asset-linux-binary
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ github.event.release.upload_url }}
-#          asset_path: LunarMP-mac.zip
-#          asset_name: LunarMP-mac.zip
-#          asset_content_type: application/octet-stream
-#
-#  build-windows:
-#    name: Build Windows packages
-#
-#    # windows-2019
-#    runs-on: windows-2019
-#    #    defaults:
-#    #      run:
-#    #        shell: msys2 {0}
-#    steps:
-#      - name: Checkout Code
-#        uses: actions/checkout@v2
-#        with:
-#          token: ${{ secrets.MY_TOKEN }}
-#          submodules: 'recursive'
-#
-#      - name: Setup MSYS2
-#        uses: msys2/setup-msys2@v2
-#        with:
-#          msystem: MINGW64
-#          path-type: inherit
-#          install: >-
-#            m4
-#            gmp
-#            mpfr
-#            mingw-w64-x86_64-eigen3
-#            mingw-w64-x86_64-boost
-#      #            mingw-w64-x86_64-cgal
-#      - shell: msys2 {0}
-#        run: |
-#          sh sh/cmake-deps.sh
-#          sh sh/cmake-build.sh
-#      #          cd deps && mkdir build
-#      #          cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - MinGW Makefiles" -S ./ -B build
-#      #          cmake --build ./build --target GMP -- -j 12
-#      #          sh sh/cmake-build.sh
-#      #          $env:PATH+=";C:\msys64\usr\bin\"
-#      #          sh sh/cmake-deps.sh
-#      #          $env:PATH
-#      #          $env:PATH -split“;”
-#      #          $env:PATH -split“;”
-#      #          gcc -v
-#      #          cmake --help
-#      #          m4 --help
-#      #          ls C:\msys64\usr\bin\
-#      #            mingw-w64-boost
-#      #            mingw-w64-eigen3
-#      #            mingw-w64-cgal
-#      #            mingw-w64-x86_64-gcc
-#      #            mingw-w64-x86_64-cmake
-#      #            mingw-w64-x86_64-make
-#      #            mingw-w64-x86_64-libjpeg-turbo
-#      #            mingw-w64-x86_64-libpng
-#      #            mingw-w64-x86_64-boost
-#      #      - name: build for deps
-#      #        run: sh sh/cmake-deps.sh
-#      #      - name: build for LunarMP
-#      #        run: sh sh/cmake-build.sh
-#      - run: ./build/LunarMP.exe version && ./build/LunarMP.exe ptest
-#      - run: mkdir output && cp ./build/LunarMP.exe ./output/LunarMP.exe
-#      - name: import window code-signing
-#        uses: GabrielAcostaEngler/signtool-code-sign@main
-#        with:
-#          certificate: ${{ secrets.CERTIFICATES_P12_WINDOW }}
-#          cert-password: ${{ secrets.CERTIFICATES_P12_PASSWORD_WINDOW }}
-#          cert-sha1: ${{ secrets.CERTIFICATES_P12_WINDOW_SHA1 }}
-#          folder: 'output'
-#          recursive: true
-#          timestamp-server: 'http://timestamp.digicert.com'
-#      #
-#      #      - run: cp -r ./build/dlls/* ./output/
-#      #
-#      - name: Zip output
-#        uses: thedoctor0/zip-release@master
-#        with:
-#          type: zip
-#          filename: LunarMP-win64.zip
-#          directory: ./
-#          path: ./output
-#
-#      - name: Upload Release Asset - Windows x64 Binary file
-#        id: upload-release-asset-win-x64-binary
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ github.event.release.upload_url }}
-#          asset_path: ./LunarMP-win64.zip
-#          asset_name: LunarMP-win64.zip
-#          asset_content_type: application/octet-stream
+      - run: |
+          /bin/bash sh/cmake-deps.sh
+          /bin/bash sh/cmake-build.sh
+      #      - name: build for deps
+      #        run: sh sh/cmake-deps.sh
+      #      - name: build for LunarMP
+      #        run: sh sh/cmake-build.sh
+      - run: ./build/LunarMP version && ./build/LunarMP ptest
+      - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
+
+      - name: import apple code-signing
+        uses: apple-actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
+          p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
+
+      - run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
+
+      - name: Zip output
+        uses: thedoctor0/zip-release@master
+        with:
+          type: zip
+          filename: LunarMP-mac.zip
+          directory: ./
+          path: ./output
+
+      - name: Upload Release Asset - Linux Binary file
+        id: upload-release-asset-linux-binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: LunarMP-mac.zip
+          asset_name: LunarMP-mac.zip
+          asset_content_type: application/octet-stream
+
+  build-windows:
+    name: Build Windows packages
+
+    # windows-2019
+    runs-on: windows-2019
+    #    defaults:
+    #      run:
+    #        shell: msys2 {0}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.MY_TOKEN }}
+          submodules: 'recursive'
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          path-type: inherit
+          install: >-
+            m4
+            gmp
+            mpfr
+            mingw-w64-x86_64-eigen3
+            mingw-w64-x86_64-boost
+      #            mingw-w64-x86_64-cgal
+      - shell: msys2 {0}
+        run: |
+          sh sh/cmake-deps.sh
+          sh sh/cmake-build.sh
+      #          cd deps && mkdir build
+      #          cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - MinGW Makefiles" -S ./ -B build
+      #          cmake --build ./build --target GMP -- -j 12
+      #          sh sh/cmake-build.sh
+      #          $env:PATH+=";C:\msys64\usr\bin\"
+      #          sh sh/cmake-deps.sh
+      #          $env:PATH
+      #          $env:PATH -split“;”
+      #          $env:PATH -split“;”
+      #          gcc -v
+      #          cmake --help
+      #          m4 --help
+      #          ls C:\msys64\usr\bin\
+      #            mingw-w64-boost
+      #            mingw-w64-eigen3
+      #            mingw-w64-cgal
+      #            mingw-w64-x86_64-gcc
+      #            mingw-w64-x86_64-cmake
+      #            mingw-w64-x86_64-make
+      #            mingw-w64-x86_64-libjpeg-turbo
+      #            mingw-w64-x86_64-libpng
+      #            mingw-w64-x86_64-boost
+      #      - name: build for deps
+      #        run: sh sh/cmake-deps.sh
+      #      - name: build for LunarMP
+      #        run: sh sh/cmake-build.sh
+      - run: ./build/LunarMP.exe version && ./build/LunarMP.exe ptest
+      - run: mkdir output && cp ./build/LunarMP.exe ./output/LunarMP.exe
+      - name: import window code-signing
+        uses: GabrielAcostaEngler/signtool-code-sign@main
+        with:
+          certificate: ${{ secrets.CERTIFICATES_P12_WINDOW }}
+          cert-password: ${{ secrets.CERTIFICATES_P12_PASSWORD_WINDOW }}
+          cert-sha1: ${{ secrets.CERTIFICATES_P12_WINDOW_SHA1 }}
+          folder: 'output'
+          recursive: true
+          timestamp-server: 'http://timestamp.digicert.com'
+      #
+      #      - run: cp -r ./build/dlls/* ./output/
+      #
+      - name: Zip output
+        uses: thedoctor0/zip-release@master
+        with:
+          type: zip
+          filename: LunarMP-win64.zip
+          directory: ./
+          path: ./output
+
+      - name: Upload Release Asset - Windows x64 Binary file
+        id: upload-release-asset-win-x64-binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./LunarMP-win64.zip
+          asset_name: LunarMP-win64.zip
+          asset_content_type: application/octet-stream
 
 
   build-ubuntu:
@@ -173,8 +176,8 @@ jobs:
           /bin/bash sh/cmake-deps.sh
           /bin/bash sh/cmake-build.sh
 
-#      - run: mkdir build && cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" -S ./ -B build
-#      - run: cmake --build ./build --target LunarMP -- -j 4
+      #      - run: mkdir build && cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" -S ./ -B build
+      #      - run: cmake --build ./build --target LunarMP -- -j 4
       - run: ./build/LunarMP version && ./build/LunarMP ptest
       - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
