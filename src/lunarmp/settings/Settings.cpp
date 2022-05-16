@@ -564,4 +564,17 @@ FaceDirection Settings::get<FaceDirection>(const std::string& key) const {
     }
 }
 
+template <>
+SimplifyType Settings::get<SimplifyType>(const std::string& key) const {
+    const std::string& value = get<std::string>(key);
+    if (value == "edge_count_stop") {
+        return SimplifyType::EDGE_COUNT_STOP;
+    } else if (value == "edge_length_stop") {
+        return SimplifyType::EDGE_LENGTH_STOP;
+    } else if (value == "edge_ratio_stop") {
+        return SimplifyType::EDGE_RATIO_STOP;
+    }
+    return SimplifyType::EDGE_LENGTH_STOP;
+}
+
 }  // namespace lunarmp
