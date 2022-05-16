@@ -81,18 +81,36 @@ void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double Edg
 
 }
 
-void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, std::string type, double stop_predicate_threshold){
+void ModelSimplification::modelSimplification(std::string input_file, std::string output_file){
     Mesh mesh;
+    DataGroup data_group;
+
     readFile(input_file, mesh);
 
-    if (type == "edge_length_stop") {
-        edgeCollapseAllShortEdges(mesh, stop_predicate_threshold);
-    }
-    else if (type == "edge_count_stop") {
-        edgeCollapseBoundedNormalChange(mesh, stop_predicate_threshold);
-    }
-    else if (type == "edge_ratio_stop") {
-        edgeCollapseGarlandHeckbert(mesh, stop_predicate_threshold);
+    SIMPLIFYMethod type = data_group.settings.get<SIMPLIFYMethod>("simplify_type");
+
+    switch(type)
+    {
+        case SIMPLIFYMethod::edge_length_stop:
+        {
+            auto edge_length_threshold = data_group.settings.get<double>("edge_length_threshold");
+            edgeCollapseAllShortEdges(mesh, edge_length_threshold);
+            break;
+        }
+        case SIMPLIFYMethod::edge_count_stop:
+        {
+            auto edge_count_threshold = data_group.settings.get<double>("edge_count_threshold");
+            edgeCollapseBoundedNormalChange(mesh, edge_count_threshold);
+            break;
+        }
+        case SIMPLIFYMethod::edge_ratio_stop:
+        {
+            auto edge_ratio_threshold = data_group.settings.get<double>("edge_ratio_threshold");
+            edgeCollapseGarlandHeckbert(mesh, edge_ratio_threshold);
+            break;
+        }
+        default:
+            break;
     }
 
     CGAL::IO::write_polygon_mesh(output_file, mesh, NP::stream_precision(17));

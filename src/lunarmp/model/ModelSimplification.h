@@ -6,7 +6,7 @@
 #define LUNARMP_DEPS_SRC_LUNARMP_MODEL_MODELSIMPLIFICATION_H_
 
 #include "ModelBase.h"
-
+#include "../data/DataGroup.h"
 
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Bbox_3.h>
@@ -34,6 +34,12 @@ typedef CGAL::Bbox_3                                               Bbox_3;
 namespace SMS = CGAL::Surface_mesh_simplification;
 
 namespace lunarmp {
+enum class SIMPLIFYMethod
+{
+    edge_length_stop,
+    edge_count_stop,
+    edge_ratio_stop
+};
 
 class ModelSimplification {
   public:
@@ -85,7 +91,7 @@ class ModelSimplification {
      * \param stop_predicate_threshold The minimum side length of a triangle.
      *
      */
-    void modelSimplification(std::string input_file, std::string output_file, std::string type, double stop_predicate_threshold);
+    void modelSimplification(std::string input_file, std::string output_file);
 
 };
 
