@@ -86,7 +86,7 @@ class ModelSimplification {
      * \param stop_predicate_threshold The minimum side length of a triangle.
      *
      */
-    void modelSimplification(std::string input_file, std::string output_file, DataGroup data_group);
+    void modelSimplification(std::string input_file, std::string output_file, DataGroup& data_group);
 
 };
 

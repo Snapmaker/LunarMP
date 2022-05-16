@@ -81,7 +81,7 @@ void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double edg
 
 }
 
-void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, DataGroup data_group){
+void ModelSimplification::modelSimplification(std::string input_file, std::string output_file, DataGroup& data_group){
     Mesh mesh;
 
     readFile(input_file, mesh);
