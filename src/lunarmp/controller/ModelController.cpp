@@ -27,7 +27,7 @@ void ModelController::check(DataGroup& data_group) {
 void ModelController::simplification(DataGroup& data_group) {
     auto input_path = data_group.settings.get<std::string>("input_path");
     auto output_path = data_group.settings.get<std::string>("output_path");
-    auto simplify_type = data_group.settings.get<int>("simplify_type");
+    auto simplify_type = data_group.settings.get<std::string>("simplify_type");
     auto simplify_stop_predicate_threshold = data_group.settings.get<double>("simplify_stop_predicate_threshold");
 
     ModelSimplification model_simplification;
