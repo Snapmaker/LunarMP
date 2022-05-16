@@ -4,8 +4,6 @@
 
 #include "ModelSimplification.h"
 
-#include "../utils/Enums.h"
-
 namespace lunarmp {
 
 bool ModelSimplification::readFile(std::string input_file, Mesh& mesh) {

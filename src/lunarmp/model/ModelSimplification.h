@@ -6,6 +6,7 @@
 #define LUNARMP_DEPS_SRC_LUNARMP_MODEL_MODELSIMPLIFICATION_H_
 
 #include "ModelBase.h"
+#include "../utils/Enums.h"
 #include "../data/DataGroup.h"
 
 #include <CGAL/Simple_cartesian.h>
