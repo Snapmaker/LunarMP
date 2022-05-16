@@ -5,41 +5,41 @@
 #ifndef LUNARMP_DEPS_SRC_LUNARMP_MODEL_MODELSIMPLIFICATION_H_
 #define LUNARMP_DEPS_SRC_LUNARMP_MODEL_MODELSIMPLIFICATION_H_
 
-#include "ModelBase.h"
-#include "../utils/Enums.h"
-#include "../data/DataGroup.h"
-
-#include <CGAL/Simple_cartesian.h>
 #include <CGAL/Bbox_3.h>
+#include <CGAL/Simple_cartesian.h>
 #include <CGAL/Surface_mesh_simplification/edge_collapse.h>
 
+#include "../data/DataGroup.h"
+#include "../utils/Enums.h"
+#include "ModelBase.h"
+
 // edgeCollapseGarlandHeckbert
-#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Count_ratio_stop_predicate.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Bounded_normal_change_placement.h>
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Count_ratio_stop_predicate.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/GarlandHeckbert_policies.h>
 // edge_collapse_all_short_edges
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Edge_length_cost.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Edge_length_stop_predicate.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Midpoint_placement.h>
 // edge limited
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Bounded_normal_change_filter.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Count_stop_predicate.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/LindstromTurk_cost.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/LindstromTurk_placement.h>
-#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Bounded_normal_change_filter.h>
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <vector>
 
-typedef CGAL::Bbox_3                                               Bbox_3;
+typedef CGAL::Bbox_3 Bbox_3;
 namespace SMS = CGAL::Surface_mesh_simplification;
 
 namespace lunarmp {
 
 class ModelSimplification {
   public:
-    int remove_edge = 0;                  //! The total number of edges removed in the model simplification.
-    double simplification_time = 0.0;     //! The time spent simplifying the model.
+    int remove_edge = 0;               //! The total number of edges removed in the model simplification.
+    double simplification_time = 0.0;  //! The time spent simplifying the model.
 
     /*!
      * \brief Read file
@@ -87,9 +87,8 @@ class ModelSimplification {
      *
      */
     void modelSimplification(std::string input_file, std::string output_file, DataGroup& data_group);
-
 };
 
-}
+}  // namespace lunarmp
 
 #endif  // LUNARMP_DEPS_SRC_LUNARMP_MODEL_MODELSIMPLIFICATION_H_
