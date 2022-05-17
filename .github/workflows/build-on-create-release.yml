@@ -1,14 +1,14 @@
 name: Build on Release created
 
-#on:
-#  release:
-#    types:
-#      - created
-on: push
+on:
+  release:
+    types:
+      - created
+#on: push
 
 jobs:
   build-macos:
-    name: Build macOS Packages
+    name: Build MacOS Packages
 
     #macos-10.15
     runs-on: macos-10.15
@@ -22,16 +22,21 @@ jobs:
 
       - name: install deps
         run: |
+          brew install gmp
+          brew install mpfr
           brew install boost
           brew install eigen
-          brew install cgal
-      - run: mkdir build && cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" -S ./ -B build
-      - run: cmake --build ./build --target LunarMP -- -j 12
-#      - name: build for deps
-#        run: sh sh/cmake-deps.sh
-#      - name: build for LunarMP
-#        run: sh sh/cmake-build.sh
-#      - run: ./build/LunarMP version && ./build/LunarMP ptest
+#          brew install cgal
+#      - run: mkdir build && cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" -S ./ -B build
+#      - run: cmake --build ./build --target LunarMP -- -j 4
+      - run: |
+          /bin/bash sh/cmake-deps.sh
+          /bin/bash sh/cmake-build.sh
+      #      - name: build for deps
+      #        run: sh sh/cmake-deps.sh
+      #      - name: build for LunarMP
+      #        run: sh sh/cmake-build.sh
+      - run: ./build/LunarMP version && ./build/LunarMP ptest
       - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
       - name: import apple code-signing
@@ -76,24 +81,50 @@ jobs:
           token: ${{ secrets.MY_TOKEN }}
           submodules: 'recursive'
 
-      #      - name: Setup MSYS2
-      #        uses: msys2/setup-msys2@v2
-      #        with:
-      #          msystem: MINGW64
-      #          install: >-
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          path-type: inherit
+          install: >-
+            m4
+            gmp
+            mpfr
+            mingw-w64-x86_64-eigen3
+            mingw-w64-x86_64-boost
+      #            mingw-w64-x86_64-cgal
+      - shell: msys2 {0}
+        run: |
+          sh sh/cmake-deps.sh
+          sh sh/cmake-build.sh
+      #          cd deps && mkdir build
+      #          cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - MinGW Makefiles" -S ./ -B build
+      #          cmake --build ./build --target GMP -- -j 12
+      #          sh sh/cmake-build.sh
+      #          $env:PATH+=";C:\msys64\usr\bin\"
+      #          sh sh/cmake-deps.sh
+      #          $env:PATH
+      #          $env:PATH -split“;”
+      #          $env:PATH -split“;”
+      #          gcc -v
+      #          cmake --help
+      #          m4 --help
+      #          ls C:\msys64\usr\bin\
+      #            mingw-w64-boost
+      #            mingw-w64-eigen3
+      #            mingw-w64-cgal
       #            mingw-w64-x86_64-gcc
       #            mingw-w64-x86_64-cmake
       #            mingw-w64-x86_64-make
       #            mingw-w64-x86_64-libjpeg-turbo
       #            mingw-w64-x86_64-libpng
       #            mingw-w64-x86_64-boost
-      - name: build for deps
-        run: sh sh/cmake-deps.sh
-      - name: build for LunarMP
-        run: sh sh/cmake-build.sh
-#      - run: ./build/LunarMP.exe version && ./build/LunarMP.exe ptest
+      #      - name: build for deps
+      #        run: sh sh/cmake-deps.sh
+      #      - name: build for LunarMP
+      #        run: sh sh/cmake-build.sh
+      - run: ./build/LunarMP.exe version && ./build/LunarMP.exe ptest
       - run: mkdir output && cp ./build/LunarMP.exe ./output/LunarMP.exe
-
       - name: import window code-signing
         uses: GabrielAcostaEngler/signtool-code-sign@main
         with:
@@ -103,9 +134,9 @@ jobs:
           folder: 'output'
           recursive: true
           timestamp-server: 'http://timestamp.digicert.com'
-#
-#      - run: cp -r ./build/dlls/* ./output/
-#
+      #
+      #      - run: cp -r ./build/dlls/* ./output/
+      #
       - name: Zip output
         uses: thedoctor0/zip-release@master
         with:
@@ -137,13 +168,17 @@ jobs:
         uses: actions/checkout@v2
 
       - run: |
+          brew install gmp
+          brew install mpfr
           brew install boost
-          brew install cgal
           brew install eigen
+      - run: |
+          /bin/bash sh/cmake-deps.sh
+          /bin/bash sh/cmake-build.sh
 
-      - run: mkdir build && cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" -S ./ -B build
-      - run: cmake --build ./build --target LunarMP -- -j 12
-#      - run: ./build/LunarMP version && ./build/LunarMP ptest
+      #      - run: mkdir build && cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" -S ./ -B build
+      #      - run: cmake --build ./build --target LunarMP -- -j 4
+      - run: ./build/LunarMP version && ./build/LunarMP ptest
       - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
       - name: Zip output
