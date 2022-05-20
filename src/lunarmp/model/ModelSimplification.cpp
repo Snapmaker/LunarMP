@@ -8,7 +8,7 @@ namespace lunarmp {
 
 bool ModelSimplification::readFile(std::string input_file, Mesh& mesh) {
     const std::string filename = CGAL::data_file_path(input_file);
-    if (!PMP::IO::read_polygon_mesh(filename, mesh)) {
+    if (!CGAL::IO::read_polygon_mesh(filename, mesh)) {
         std::cerr << "Invalid input." << std::endl;
         return EXIT_FAILURE;
     }
