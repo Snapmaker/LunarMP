@@ -19,9 +19,10 @@ void ModelController::repair(DataGroup& data_group) {
 
 void ModelController::check(DataGroup& data_group) {
     auto input_path = data_group.settings.get<std::string>("input_path");
+    auto output_path = data_group.settings.get<std::string>("output_path");
 
     ModelCheck model_check;
-    model_check.checkModel(input_path);
+    model_check.checkModel(input_path, output_path);
 }
 
 void ModelController::simplification(DataGroup& data_group) {

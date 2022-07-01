@@ -38,6 +38,7 @@ class ModelCheck {
     bool is_intersecting = false; //! A triangulated surface mesh self-intersects.
     bool is_producing_self_intersecting = false; //! Number of intersections between a subset of faces of a triangulated surface mesh.
 
+    double read_time = 0;
     double check_time = 0;                      //! The time spent inspecting the model.
 
     /*!
@@ -58,14 +59,14 @@ class ModelCheck {
     /*!
      * \brief Check the model for errors.
      */
-    void checkModel(std::string input_file);
+    void checkModel(std::string input_file, std::string output_file);
 
     /*!
      * \brief Test interface.
      */
     void checkTest1();
 
-    bool checkTest(std::string file_name);
+    bool checkTest(std::string file_name, std::string output_file);
 };
 
 }
