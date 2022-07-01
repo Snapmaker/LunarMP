@@ -87,7 +87,8 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
         return;
     }
     check_time = t.time();
-//    CGAL::IO::write_polygon_mesh(output_file, mesh, NP::stream_precision(17));
+
+    CGAL::IO::write_polygon_mesh(output_file, mesh, NP::stream_precision(17));
 }
 
 void ModelCheck::checkTest1() {
