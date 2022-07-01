@@ -15,6 +15,7 @@
 #include <CGAL/IO/polygon_soup_io.h>
 
 #include "ModelBase.h"
+#include "../utils/Enums.h"
 
 #include <iostream>
 #include <fstream>

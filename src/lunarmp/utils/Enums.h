@@ -100,6 +100,11 @@ enum class SimplifyType
     EDGE_RATIO_STOP
 };
 
+enum class ExitType {
+    BROKEN = -2,
+    WATER = 0,
+};
+
 } // namespace lunarmp
 
 #endif // LUBANENGINE_SRC_SETTINGS_ENUMSETTINGS_H_

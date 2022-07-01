@@ -58,6 +58,7 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
 
     if (non_manifold_edge || non_manifold_vertex || duplicated_vertex || polygon_orientation_reversed) {
         check_time = t.time();
+        exit(static_cast<int>(ExitType::BROKEN));
         return;
     }
 
@@ -66,29 +67,34 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
     is_outward_mesh = PMP::is_outward_oriented(mesh);
     if (is_outward_mesh) {
         check_time = t.time();
+        exit(static_cast<int>(ExitType::BROKEN));
         return;
     }
 
     checkConnectedComponents(mesh);
     if (number_of_connected_components) {
         check_time = t.time();
+        exit(static_cast<int>(ExitType::BROKEN));
         return;
     }
 
     checkHoles(mesh);
     if (number_of_holes) {
         check_time = t.time();
+        exit(static_cast<int>(ExitType::BROKEN));
         return;
     }
 
     checkIntersect(mesh);
     if (is_intersecting) {
         check_time = t.time();
+        exit(static_cast<int>(ExitType::BROKEN));
         return;
     }
     check_time = t.time();
 
     CGAL::IO::write_polygon_mesh(output_file, mesh, NP::stream_precision(17));
+    exit(static_cast<int>(ExitType::WATER));
 }
 
 void ModelCheck::checkTest1() {
