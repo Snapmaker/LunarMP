@@ -62,6 +62,8 @@ class ModelCheck {
      */
     void checkModel(std::string input_file, std::string output_file);
 
+    void writeMesh(std::string output_file, Mesh& mesh);
+
     /*!
      * \brief Test interface.
      */

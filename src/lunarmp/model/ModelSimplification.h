@@ -87,6 +87,8 @@ class ModelSimplification {
      *
      */
     void modelSimplification(std::string input_file, std::string output_file, DataGroup& data_group);
+
+    void writeMesh(std::string output_file, Mesh& mesh);
 };
 
 }  // namespace lunarmp

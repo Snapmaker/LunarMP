@@ -6,14 +6,9 @@
 
 namespace lunarmp {
 
-std::string splitPath(std::string path) {
-    std::string res = "";
-    int i = 0;
-    while(i < path.size()-1 || !path.empty() || path[i] != '.') {
-        res += path[i++];
-    }
-
-    return res;
+void ModelCheck::writeMesh(std::string output_file, Mesh& mesh) {
+    CGAL::IO::write_polygon_mesh(output_file+".stl", mesh, NP::stream_precision(17));
+    CGAL::IO::write_polygon_mesh(output_file+".ply", mesh, NP::stream_precision(17));
 }
 
 void ModelCheck::checkConnectedComponents(Mesh mesh) {
@@ -68,8 +63,8 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
 
     if (non_manifold_edge || non_manifold_vertex || duplicated_vertex || polygon_orientation_reversed) {
         check_time = t.time();
+        writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
-        return;
     }
 
     PMP::polygon_soup_to_polygon_mesh(points, polygons, mesh, NP::outward_orientation(true));
@@ -77,34 +72,32 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
     is_outward_mesh = PMP::is_outward_oriented(mesh);
     if (is_outward_mesh) {
         check_time = t.time();
+        writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
-        return;
     }
 
     checkConnectedComponents(mesh);
     if (number_of_connected_components) {
         check_time = t.time();
+        writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
-        return;
     }
 
     checkHoles(mesh);
     if (number_of_holes) {
         check_time = t.time();
+        writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
-        return;
     }
 
     checkIntersect(mesh);
     if (is_intersecting) {
         check_time = t.time();
+        writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
-        return;
     }
     check_time = t.time();
-
-    CGAL::IO::write_polygon_mesh(splitPath(output_file)+".stl", mesh, NP::stream_precision(17));
-    CGAL::IO::write_polygon_mesh(splitPath(output_file)+".ply", mesh, NP::stream_precision(17));
+    writeMesh(output_file, mesh);
     exit(static_cast<int>(ExitType::WATER));
 }
 
