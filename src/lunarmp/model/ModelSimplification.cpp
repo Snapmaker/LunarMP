@@ -6,6 +6,16 @@
 
 namespace lunarmp {
 
+std::string splitPath(std::string path) {
+    std::string res = "";
+    int i = 0;
+    while(i < path.size()-1 || !path.empty() || path[i] != '.') {
+        res += path[i++];
+    }
+
+    return res;
+}
+
 bool ModelSimplification::readFile(std::string input_file, Mesh& mesh) {
     const std::string filename = CGAL::data_file_path(input_file);
     if (!CGAL::IO::read_polygon_mesh(filename, mesh)) {
@@ -93,8 +103,8 @@ void ModelSimplification::modelSimplification(std::string input_file, std::strin
         default:
             break;
     }
-
-    CGAL::IO::write_polygon_mesh(output_file, mesh, NP::stream_precision(17));
+    CGAL::IO::write_polygon_mesh(splitPath(output_file)+".stl", mesh, NP::stream_precision(17));
+    CGAL::IO::write_polygon_mesh(splitPath(output_file)+".ply", mesh, NP::stream_precision(17));
 }
 
 }  // namespace lunarmp
