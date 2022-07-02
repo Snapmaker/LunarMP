@@ -6,6 +6,16 @@
 
 namespace lunarmp {
 
+std::string splitPath(std::string path) {
+    std::string res = "";
+    int i = 0;
+    while(i < path.size()-1 || !path.empty() || path[i] != '.') {
+        res += path[i++];
+    }
+
+    return res;
+}
+
 void ModelCheck::checkConnectedComponents(Mesh mesh) {
     const double bound = std::cos(0.75 * CGAL_PI);
     std::vector<face_descriptor> cc;
@@ -93,7 +103,8 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
     }
     check_time = t.time();
 
-    CGAL::IO::write_polygon_mesh(output_file, mesh, NP::stream_precision(17));
+    CGAL::IO::write_polygon_mesh(splitPath(output_file)+".stl", mesh, NP::stream_precision(17));
+    CGAL::IO::write_polygon_mesh(splitPath(output_file)+".ply", mesh, NP::stream_precision(17));
     exit(static_cast<int>(ExitType::WATER));
 }
 
