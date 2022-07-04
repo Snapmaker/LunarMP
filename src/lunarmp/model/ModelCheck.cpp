@@ -62,7 +62,7 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
     is_outward_mesh = PMP::is_outward_oriented(mesh);
     if (!is_outward_mesh) {
         check_time = t.time();
-        log("check file time: %.3f", check_time);
+        log("Broken Model!\ncheck file time: %.3f", check_time);
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
@@ -70,7 +70,7 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
 
     if (checkBorder(mesh)) {
         check_time = t.time();
-        log("check file time: %.3f", check_time);
+        log("Broken Model!\ncheck file time: %.3f", check_time);
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
@@ -79,14 +79,14 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
     checkIntersect(mesh);
     if (is_intersecting) {
         check_time = t.time();
-        log("check file time: %.3f", check_time);
+        log("Broken Model!\ncheck file time: %.3f", check_time);
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
     log("is_intersecting check: %.3f\n", t.time());
 
     check_time = t.time();
-    log("check file time: %.3f", check_time);
+    log("Closed Model!\ncheck file time: %.3f", check_time);
 
     writeMesh(output_file, mesh);
     exit(static_cast<int>(ExitType::WATER));
