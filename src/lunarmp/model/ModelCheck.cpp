@@ -65,23 +65,27 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
     }
     PMP::polygon_soup_to_polygon_mesh(points, polygons, mesh, NP::outward_orientation(true));
     read_time = t.time();
+    log("read file time: %.3f\n", read_time);
     t.reset();
 
     is_outward_mesh = PMP::is_outward_oriented(mesh);
     if (!is_outward_mesh) {
         check_time = t.time();
+        log("check file time: %.3f", check_time);
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
 
     if (checkNonManifoldness(mesh)) {
         check_time = t.time();
+        log("check file time: %.3f", check_time);
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
 
     if (checkHoles(mesh)) {
         check_time = t.time();
+        log("check file time: %.3f", check_time);
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
@@ -89,10 +93,12 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
     checkIntersect(mesh);
     if (is_intersecting) {
         check_time = t.time();
+        log("check file time: %.3f", check_time);
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
     check_time = t.time();
+    log("check file time: %.3f", check_time);
 
     writeMesh(output_file, mesh);
     exit(static_cast<int>(ExitType::WATER));
