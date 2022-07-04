@@ -29,7 +29,7 @@ void ModelCheck::checkConnectedComponents(Mesh mesh) {
     number_of_connected_components = (int)num;
 }
 
-bool ModelCheck::checkHoles(Mesh mesh) {
+bool ModelCheck::checkBorder(Mesh mesh) {
     std::unordered_set<halfedge_descriptor> hedge_handled;
     for(halfedge_descriptor h : halfedges(mesh)) {
         if (is_border(h, mesh)) {
@@ -42,15 +42,6 @@ bool ModelCheck::checkHoles(Mesh mesh) {
 
 void ModelCheck::checkIntersect(Mesh mesh) {
     is_intersecting = PMP::does_self_intersect<CGAL::Parallel_if_available_tag>(mesh, NP::vertex_point_map(get(CGAL::vertex_point, mesh)));
-}
-
-bool ModelCheck::checkNonManifoldness(Mesh mesh) {
-    for(vertex_descriptor v : vertices(mesh)) {
-        if(PMP::is_non_manifold_vertex(v, mesh)) {
-            return true;
-        }
-    }
-    return false;
 }
 
 void ModelCheck::checkModel(std::string input_file, std::string output_file) {
@@ -75,20 +66,15 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
+    log("normal check: %.3f\n", t.time());
 
-    if (checkNonManifoldness(mesh)) {
+    if (checkBorder(mesh)) {
         check_time = t.time();
         log("check file time: %.3f", check_time);
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
-
-    if (checkHoles(mesh)) {
-        check_time = t.time();
-        log("check file time: %.3f", check_time);
-        writeMesh(output_file, mesh);
-        exit(static_cast<int>(ExitType::BROKEN));
-    }
+    log("Border check: %.3f\n", t.time());
 
     checkIntersect(mesh);
     if (is_intersecting) {
@@ -97,6 +83,8 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
+    log("is_intersecting check: %.3f\n", t.time());
+
     check_time = t.time();
     log("check file time: %.3f", check_time);
 

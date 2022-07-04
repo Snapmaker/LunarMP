@@ -51,11 +51,9 @@ class ModelCheck {
     void checkConnectedComponents(Mesh mesh);
 
     /*!
-     * \brief Determine whether there are holes in the mesh.
+     * \brief Determine whether there are borders in the mesh.
      */
-    bool checkHoles(Mesh mesh);
-
-    bool checkNonManifoldness(Mesh mesh);
+    bool checkBorder(Mesh mesh);
     /*!
      * \brief Determine whether the mesh is self-intersecting.
      */
