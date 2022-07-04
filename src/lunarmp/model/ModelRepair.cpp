@@ -19,7 +19,8 @@ bool ModelRepair::readPolygonSoup(std::string file_name, std::vector<Point_3>& p
 
 void ModelRepair::writePolygon(std::string file_name, Mesh& mesh) {
     log("Writing file.\n");
-    CGAL::IO::write_polygon_mesh(file_name, mesh, NP::stream_precision(17));
+    CGAL::IO::write_polygon_mesh(file_name+".stl", mesh, NP::stream_precision(17));
+    CGAL::IO::write_polygon_mesh(file_name+".ply", mesh, NP::stream_precision(17));
 }
 
 void ModelRepair::isOutwardMesh(Mesh& mesh) {

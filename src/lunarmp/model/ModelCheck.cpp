@@ -29,62 +29,58 @@ void ModelCheck::checkConnectedComponents(Mesh mesh) {
     number_of_connected_components = (int)num;
 }
 
-void ModelCheck::checkHoles(Mesh mesh) {
-    number_of_holes = 0;
-    std::vector<halfedge_descriptor> border_cycles;
-    PMP::extract_boundary_cycles(mesh, std::back_inserter(border_cycles));
-    number_of_holes = border_cycles.size();
+bool ModelCheck::checkHoles(Mesh mesh) {
+    std::unordered_set<halfedge_descriptor> hedge_handled;
+    for(halfedge_descriptor h : halfedges(mesh)) {
+        if (is_border(h, mesh)) {
+            return true;
+        }
+    }
+    return false;
 }
+
 
 void ModelCheck::checkIntersect(Mesh mesh) {
     is_intersecting = PMP::does_self_intersect<CGAL::Parallel_if_available_tag>(mesh, NP::vertex_point_map(get(CGAL::vertex_point, mesh)));
-//    std::vector<std::pair<face_descriptor, face_descriptor>> intersected_tris;
-//    PMP::self_intersections<CGAL::Parallel_if_available_tag>(faces(mesh), mesh, std::back_inserter(intersected_tris));
-//    number_of_intersections = intersected_tris.size();
+}
+
+bool ModelCheck::checkNonManifoldness(Mesh mesh) {
+    for(vertex_descriptor v : vertices(mesh)) {
+        if(PMP::is_non_manifold_vertex(v, mesh)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void ModelCheck::checkModel(std::string input_file, std::string output_file) {
     t.start();
-
     std::vector<Point_3> points;
-    std::vector<std::vector<std::size_t>> polygons;
+    std::vector<std::vector<std::size_t> > polygons;
     Mesh mesh;
-
-    if (!CGAL::IO::read_polygon_soup(input_file, points, polygons) || points.empty()) {
+    const std::string filename = CGAL::data_file_path(input_file);
+    if (!CGAL::IO::read_polygon_soup(filename, points, polygons) || points.empty()) {
         logError("Cannot open file.\n");
         return;
     }
+    PMP::polygon_soup_to_polygon_mesh(points, polygons, mesh, NP::outward_orientation(true));
     read_time = t.time();
     t.reset();
 
-    Visitor vis(non_manifold_edge, non_manifold_vertex, duplicated_vertex, vertex_id_in_polygon_replaced, polygon_orientation_reversed);
-
-    is_producing_self_intersecting = PMP::orient_polygon_soup(points, polygons, NP::visitor(vis));
-
-    if (non_manifold_edge || non_manifold_vertex || duplicated_vertex || polygon_orientation_reversed) {
-        check_time = t.time();
-        writeMesh(output_file, mesh);
-        exit(static_cast<int>(ExitType::BROKEN));
-    }
-
-    PMP::polygon_soup_to_polygon_mesh(points, polygons, mesh, NP::outward_orientation(true));
-
     is_outward_mesh = PMP::is_outward_oriented(mesh);
-    if (is_outward_mesh) {
+    if (!is_outward_mesh) {
         check_time = t.time();
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
 
-    checkConnectedComponents(mesh);
-    if (number_of_connected_components) {
+    if (checkNonManifoldness(mesh)) {
         check_time = t.time();
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
     }
 
-    checkHoles(mesh);
-    if (number_of_holes) {
+    if (checkHoles(mesh)) {
         check_time = t.time();
         writeMesh(output_file, mesh);
         exit(static_cast<int>(ExitType::BROKEN));
@@ -97,6 +93,7 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
         exit(static_cast<int>(ExitType::BROKEN));
     }
     check_time = t.time();
+
     writeMesh(output_file, mesh);
     exit(static_cast<int>(ExitType::WATER));
 }

@@ -11,6 +11,7 @@
 #include <CGAL/Polygon_mesh_processing/IO/polygon_mesh_io.h>
 
 #include "../utils/logoutput.h"
+#include "../utils/Enums.h"
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel                 K;
 typedef K::Point_3                                                          Point_3;

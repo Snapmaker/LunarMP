@@ -10,7 +10,6 @@
 #include <CGAL/Surface_mesh_simplification/edge_collapse.h>
 
 #include "../data/DataGroup.h"
-#include "../utils/Enums.h"
 #include "ModelBase.h"
 
 // edgeCollapseGarlandHeckbert

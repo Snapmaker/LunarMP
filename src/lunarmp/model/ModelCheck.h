@@ -6,13 +6,16 @@
 #define LUNARMP_SRC_LUNARMP_MODEL_MODELCHECK_H_
 
 #include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
-#include <CGAL/Polygon_mesh_processing/repair_polygon_soup.h>
-#include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
+//#include <CGAL/Polygon_mesh_processing/repair_polygon_soup.h>
+//#include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
 #include <CGAL/Polygon_mesh_processing/self_intersections.h>
 #include <CGAL/Polygon_mesh_processing/triangulate_hole.h>
 #include <CGAL/Polygon_mesh_processing/stitch_borders.h>
 #include <CGAL/Polygon_mesh_processing/orientation.h>
+#include <CGAL/Polygon_mesh_processing/manifoldness.h>
 #include <CGAL/IO/polygon_soup_io.h>
+//#include <CGAL/boost/graph/IO/polygon_mesh_io.h>
+
 
 #include "ModelBase.h"
 #include "../utils/Enums.h"
@@ -50,8 +53,9 @@ class ModelCheck {
     /*!
      * \brief Determine whether there are holes in the mesh.
      */
-    void checkHoles(Mesh mesh);
+    bool checkHoles(Mesh mesh);
 
+    bool checkNonManifoldness(Mesh mesh);
     /*!
      * \brief Determine whether the mesh is self-intersecting.
      */
