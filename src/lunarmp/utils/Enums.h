@@ -102,6 +102,7 @@ enum class SimplifyType
 
 enum class ExitType {
     BROKEN = -2,
+    FAILURE = -1,
     WATER = 0,
 };
 
