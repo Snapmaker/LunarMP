@@ -6,6 +6,17 @@
 
 namespace lunarmp {
 
+void statusCode(double time, int type) {
+    log("check file time: %.3f\n", time);
+    log("status: %d\n", type);
+    if (type == 1) {
+        log("Message: Broken Model!\n");
+    }
+    else {
+        log("Message: Closed Model!\n");
+    }
+}
+
 void ModelCheck::writeMesh(std::string output_file, Mesh& mesh) {
     CGAL::IO::write_polygon_mesh(output_file+".stl", mesh, NP::stream_precision(17));
     CGAL::IO::write_polygon_mesh(output_file+".ply", mesh, NP::stream_precision(17));
@@ -62,34 +73,33 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
     is_outward_mesh = PMP::is_outward_oriented(mesh);
     if (!is_outward_mesh) {
         check_time = t.time();
-        log("Broken Model!\ncheck file time: %.3f", check_time);
         writeMesh(output_file, mesh);
-        exit(static_cast<int>(ExitType::BROKEN));
+        statusCode(check_time, 1);
+        return;
     }
     log("normal check: %.3f\n", t.time());
 
     if (checkBorder(mesh)) {
         check_time = t.time();
-        log("Broken Model!\ncheck file time: %.3f", check_time);
         writeMesh(output_file, mesh);
-        exit(static_cast<int>(ExitType::BROKEN));
+        statusCode(check_time, 1);
+        return;
     }
     log("Border check: %.3f\n", t.time());
 
     checkIntersect(mesh);
     if (is_intersecting) {
         check_time = t.time();
-        log("Broken Model!\ncheck file time: %.3f", check_time);
         writeMesh(output_file, mesh);
-        exit(static_cast<int>(ExitType::BROKEN));
+        statusCode(check_time, 1);
+        return;
     }
     log("is_intersecting check: %.3f\n", t.time());
 
     check_time = t.time();
-    log("Closed Model!\ncheck file time: %.3f", check_time);
+    statusCode(check_time, 0);
 
     writeMesh(output_file, mesh);
-    exit(static_cast<int>(ExitType::WATER));
 }
 
 void ModelCheck::checkTest1() {
