@@ -13,10 +13,13 @@
 #include <CGAL/Polygon_mesh_processing/self_intersections.h>
 #include <CGAL/Polygon_mesh_processing/stitch_borders.h>
 #include <CGAL/Polygon_mesh_processing/triangulate_hole.h>
+#include <CGAL/Polygon_mesh_processing/manifoldness.h>
+#include <CGAL/Bbox_3.h>
 
 #include <fstream>
 #include <iostream>
 
+#include "../data/DataGroup.h"
 #include "ModelBase.h"
 
 namespace lunarmp {
@@ -24,9 +27,9 @@ namespace lunarmp {
 class ModelRepair {
   private:
     // fill holes params
-    double max_hole_diam = -1.0;  //! Lower diameter of filling hole
+    double max_hole_diam = 0.08;  //! Lower diameter of filling hole
 
-    int max_num_hole_edges = -1;  //! Lower limit of the number of edges for filling holes
+    int max_num_hole_edges = 2;  //! Lower limit of the number of edges for filling holes
 
     bool use_delaunay_triangulation = true;  //! If true, use the Delaunay triangulation facet search space.
                                              //! If no valid triangulation can be found in this search space,
@@ -69,6 +72,7 @@ class ModelRepair {
     double repair_self_intersect_time = 0;  //! Time spent on self intersecting triangular plane repairs
     double read_file_time = 0;              //! Time spent on file to read
 
+    double hole_factor = 0;
     /*!
      * \brief Read model file as polygon soup, support off/obj/stl/ply/ts/vtp file
      *
@@ -114,6 +118,11 @@ class ModelRepair {
      * \brief Judge whether the normal vectors of the mesh face outwards uniformly.
      */
     void isOutwardMesh(Mesh& mesh);
+
+    /*!
+     * \brief Check borders for mesh.
+     */
+    bool checkBorder(Mesh mesh);
 
     /*!
      * \brief Stitch borders for mesh.
@@ -165,15 +174,16 @@ class ModelRepair {
      */
     void isotropic_remeshing(Mesh& mesh);
 
+    void calculateFactor(DataGroup& data_group, Mesh mesh);
     /*!
      * \brief Comprehensive repair interface.
      */
-    void repairModel(std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh);
+    void repairModel(std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& , DataGroup& data_group);
 
     /*!
      * \brief Model repair interface.
      */
-    void repairModel(std::string input_file, std::string output_file);
+    void repairModel(std::string input_file, std::string output_file, DataGroup& data_group);
 
     /*!
      * \brief Test interface.

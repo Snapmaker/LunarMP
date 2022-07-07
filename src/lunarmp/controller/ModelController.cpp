@@ -14,7 +14,7 @@ void ModelController::repair(DataGroup& data_group) {
     auto output_path = data_group.settings.get<std::string>("output_path");
 
     ModelRepair model_repair;
-    model_repair.repairModel(input_path, output_path);
+    model_repair.repairModel(input_path, output_path, data_group);
 }
 
 void ModelController::check(DataGroup& data_group) {
