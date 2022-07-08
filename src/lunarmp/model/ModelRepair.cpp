@@ -17,9 +17,9 @@ bool ModelRepair::readPolygonSoup(std::string file_name, std::vector<Point_3>& p
 
     if (!CGAL::IO::read_polygon_soup(file_name, points, polygons) || points.empty()) {
         logError("Cannot open file.\n");
-        exit(2);
+        return false;
     }
-    return EXIT_SUCCESS;
+    return true;
 }
 
 void ModelRepair::writePolygon(std::string file_name, Mesh& mesh) {
@@ -221,7 +221,7 @@ bool isSmallHole(halfedge_descriptor h, Mesh& mesh, double max_hole_diam, int ma
         }
 
         double area = getArea(hole_points);
-        std::cout << "area: " << area << "\n";
+//        std::cout << "area: " << area << "\n";
         if (area > max_hole_diam) {
             return false;
         }
@@ -246,7 +246,9 @@ void ModelRepair::repairHoleOfDiameter(Mesh& mesh) {
             success = std::get<0>(PMP::triangulate_refine_and_fair_hole(mesh, h,
                                                                              std::back_inserter(patch_facets),
                                                                              std::back_inserter(patch_vertices)));
-            success_fill++;
+            if (success) {
+                success_fill++;
+            }
         }
         else {
             PMP::triangulate_hole(mesh, h, std::back_inserter(patch_facets));
@@ -337,7 +339,9 @@ void ModelRepair::repairModel(std::string input_file, std::string output_file, D
     std::vector<std::vector<std::size_t> > polygons;
     Mesh mesh;
     t.start();
-    readPolygonSoup(input_file, points, polygons);
+    if (!readPolygonSoup(input_file, points, polygons)) {
+        exit(2);
+    }
     read_file_time = t.time();
     log("Read Time: %.3f\n", read_file_time);
     t.reset();
