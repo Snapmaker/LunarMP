@@ -216,9 +216,12 @@ bool isSmallHole(halfedge_descriptor h, Mesh& mesh, double max_hole_diam, int ma
         hole_bbox += p.bbox();
         ++num_hole_edges;
 
-        if (num_hole_edges < 3) continue;
-        double area = getArea(hole_points);
+        if (num_hole_edges < 3) {
+            continue;
+        }
 
+        double area = getArea(hole_points);
+        std::cout << "area: " << area << "\n";
         if (area > max_hole_diam) {
             return false;
         }
@@ -234,18 +237,19 @@ void ModelRepair::repairHoleOfDiameter(Mesh& mesh) {
     PMP::extract_boundary_cycles(mesh, std::back_inserter(border_cycles));
     nb_holes = border_cycles.size();
     int success_fill = 0;
-    max_hole_diam /= (hole_factor * hole_factor);
+    max_hole_diam /= (hole_factor * hole_factor / 2);
     for (halfedge_descriptor h : border_cycles) {
-        if (isSmallHole(h, mesh, max_hole_diam, max_num_hole_edges))  {
-            continue;
-        }
+        bool success;
         std::vector<face_descriptor> patch_facets;
         std::vector<vertex_descriptor> patch_vertices;
-        bool success = std::get<0>(PMP::triangulate_refine_and_fair_hole(mesh, h,
+        if (!isSmallHole(h, mesh, max_hole_diam, max_num_hole_edges))  {
+            success = std::get<0>(PMP::triangulate_refine_and_fair_hole(mesh, h,
                                                                              std::back_inserter(patch_facets),
                                                                              std::back_inserter(patch_vertices)));
-
-        if (success) {
+            success_fill++;
+        }
+        else {
+            PMP::triangulate_hole(mesh, h, std::back_inserter(patch_facets));
             success_fill++;
         }
     }
