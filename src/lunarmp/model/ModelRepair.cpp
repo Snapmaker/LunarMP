@@ -17,7 +17,7 @@ bool ModelRepair::readPolygonSoup(std::string file_name, std::vector<Point_3>& p
 
     if (!CGAL::IO::read_polygon_soup(file_name, points, polygons) || points.empty()) {
         logError("Cannot open file.\n");
-        return EXIT_FAILURE;
+        exit(2);
     }
     return EXIT_SUCCESS;
 }
@@ -166,26 +166,62 @@ void ModelRepair::calculateFactor(DataGroup& data_group, Mesh mesh) {
     hole_factor = std::min(machine_width/mesh_width, std::min(machine_height/mesh_height, machine_depth/mesh_depth));
 }
 
+double getArea(std::vector<Point_3> points)
+{
+    if (points.size() < 3) {
+        return 0;
+    }
+    double area = 0;
+    Point_3 p1 = points[0];
+    Point_3 p2 = points[1];
+    Point_3 p3 = points[2];
+
+    if (points.size() < 3) {
+        double i = (p1.y() - p2.y()) * (p1.z() - p3.z()) - (p1.y() - p3.y()) * (p1.z() - p2.z());
+        double j = (p1.x() - p3.x()) * (p1.z() - p2.z()) - (p1.x() - p2.x()) * (p1.z() - p3.z());
+        double k = (p1.x() - p2.x()) * (p1.y() - p3.y()) - (p1.x() - p3.x()) * (p1.y() - p2.y());
+        area = std::pow((i + j + k), 1/2);
+    }
+    else {
+        Point_3 p0 = points[points.size() - 1];
+
+        double a = std::pow(((p2.y()-p1.y())*(p3.z()-p1.z())-(p3.y()-p1.y())*(p2.z()-p1.z())),2)
+                   + std::pow(((p3.x()-p1.x())*(p2.z()-p1.z())-(p2.x()-p1.x())*(p3.z()-p1.z())),2)
+                   + std::pow(((p2.x()-p1.x())*(p3.y()-p1.y())-(p3.x()-p1.x())*(p2.y()-p1.y())),2);
+
+        double cosnx = ((p2.y()-p1.y())*(p3.z()-p1.z())-(p3.y()-p1.y())*(p2.z()-p1.z())) / (std::pow(a,1/2));
+        double cosny = ((p3.x()-p1.x())*(p2.z()-p1.z())-(p2.x()-p1.x())*(p3.z()-p1.z())) / (std::pow(a,1/2));
+        double cosnz = ((p2.x()-p1.x())*(p3.y()-p1.y())-(p3.x()-p1.x())*(p2.y()-p1.y())) / (std::pow(a,1/2));
+
+        area = cosnz*(p0.x()*p1.y()-p1.x()*p0.y()) + cosnx*(p0.y()*p1.z()-p1.y()*p0.z()) + cosny*(p2.z()*p1.x()-p1.z()*p0.x());
+
+        for (int j = 0; j < points.size()-1; j++) {
+            Point_3 pj1 = points[j];
+            Point_3 pj2 = points[j+1];
+            area += cosnz *((pj1.x())*(pj2.y())-(pj2.x())*(pj1.y()))
+                    + cosnx*((pj1.y())*(pj2.z())-(pj2.y())*(pj1.z()))
+                    + cosny*((pj1.z())*(pj2.x())-(pj2.z())*(pj1.x()));
+        }
+    }
+    return std::abs(area) * 0.5;
+}
+
 bool isSmallHole(halfedge_descriptor h, Mesh& mesh, double max_hole_diam, int max_num_hole_edges) {
     int num_hole_edges = 0;
     CGAL::Bbox_3 hole_bbox;
+    std::vector<Point_3> hole_points;
     for (halfedge_descriptor hc : CGAL::halfedges_around_face(h, mesh)) {
         const Point_3& p = mesh.point(target(hc, mesh));
+        hole_points.push_back(p);
         hole_bbox += p.bbox();
         ++num_hole_edges;
-        // Exit early, to avoid unnecessary traversal of large holes
-        if (hole_bbox.xmax() - hole_bbox.xmin() > max_hole_diam) {
+
+        if (num_hole_edges < 3) continue;
+        double area = getArea(hole_points);
+
+        if (area > max_hole_diam) {
             return false;
         }
-        if (hole_bbox.ymax() - hole_bbox.ymin() > max_hole_diam) {
-            return false;
-        }
-        if (hole_bbox.zmax() - hole_bbox.zmin() > max_hole_diam) {
-            return false;
-        }
-    }
-    if (num_hole_edges > max_num_hole_edges) {
-        return false;
     }
     return true;
 }
@@ -198,9 +234,9 @@ void ModelRepair::repairHoleOfDiameter(Mesh& mesh) {
     PMP::extract_boundary_cycles(mesh, std::back_inserter(border_cycles));
     nb_holes = border_cycles.size();
     int success_fill = 0;
-    max_hole_diam /= hole_factor;
+    max_hole_diam /= (hole_factor * hole_factor);
     for (halfedge_descriptor h : border_cycles) {
-        if (!isSmallHole(h, mesh, max_hole_diam, max_num_hole_edges)) {
+        if (isSmallHole(h, mesh, max_hole_diam, max_num_hole_edges))  {
             continue;
         }
         std::vector<face_descriptor> patch_facets;
@@ -274,8 +310,10 @@ void ModelRepair::repairModel(std::vector<Point_3>& points, std::vector<std::vec
         statusCode(5, (char*)"Repair holes.");
         calculateFactor(data_group, mesh);
         repairHoleOfDiameter(mesh);
+        if(!PMP::is_outward_oriented(mesh)) {
+            PMP::orient(mesh);
+        }
         repair_holes_time = t.time();
-
         t.reset();
     }
 
