@@ -63,7 +63,7 @@ void ModelCheck::checkModel(std::string input_file, std::string output_file) {
     const std::string filename = CGAL::data_file_path(input_file);
     if (!CGAL::IO::read_polygon_soup(filename, points, polygons) || points.empty()) {
         logError("Cannot open file.\n");
-        return;
+        exit(2);
     }
     PMP::polygon_soup_to_polygon_mesh(points, polygons, mesh, NP::outward_orientation(true));
     read_time = t.time();

@@ -15,11 +15,11 @@ bool ModelSimplification::readFile(std::string input_file, Mesh& mesh) {
     const std::string filename = CGAL::data_file_path(input_file);
     if (!CGAL::IO::read_polygon_mesh(filename, mesh)) {
         std::cerr << "Invalid input." << std::endl;
-        return EXIT_FAILURE;
+        exit(2);
     }
     if (!CGAL::is_triangle_mesh(mesh)) {
         std::cerr << "Input geometry is not triangulated." << std::endl;
-        return EXIT_FAILURE;
+        exit(2);
     }
     return EXIT_SUCCESS;
 }
