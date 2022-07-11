@@ -31,11 +31,13 @@ set(PROJECT_SRCS
 
 add_library(_LunarMP STATIC ${PROJECT_SRCS})
 
-# MPFR
-find_package(MPFR REQUIRED)
-#
 # GMP
 find_package(GMP REQUIRED)
+target_include_directories(_LunarMP PUBLIC ${GMP_INCLUDE_DIR})
+target_link_libraries(_LunarMP PUBLIC ${GMP_LIBRARIES})
+
+# MPFR
+find_package(MPFR REQUIRED)
 
 # EIGEN3
 find_package(Eigen3 REQUIRED)
