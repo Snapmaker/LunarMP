@@ -8,12 +8,12 @@ namespace lunarmp {
 
 void statusCode(double time, int type) {
     log("check file time: %.3f\n", time);
-    log("status:%d;", type);
+    log("Status: %d; \n", type);
     if (type == 1) {
-        log("Message:Broken Model!\n");
+        log("Message: Broken Model!\n");
     }
     else {
-        log("Message:Closed Model!\n");
+        log("Message: Closed Model!\n");
     }
 }
 
