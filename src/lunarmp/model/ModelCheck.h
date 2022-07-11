@@ -6,15 +6,19 @@
 #define LUNARMP_SRC_LUNARMP_MODEL_MODELCHECK_H_
 
 #include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
-#include <CGAL/Polygon_mesh_processing/repair_polygon_soup.h>
-#include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
+//#include <CGAL/Polygon_mesh_processing/repair_polygon_soup.h>
+//#include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
 #include <CGAL/Polygon_mesh_processing/self_intersections.h>
 #include <CGAL/Polygon_mesh_processing/triangulate_hole.h>
 #include <CGAL/Polygon_mesh_processing/stitch_borders.h>
 #include <CGAL/Polygon_mesh_processing/orientation.h>
+#include <CGAL/Polygon_mesh_processing/manifoldness.h>
 #include <CGAL/IO/polygon_soup_io.h>
+//#include <CGAL/boost/graph/IO/polygon_mesh_io.h>
+
 
 #include "ModelBase.h"
+#include "../utils/Enums.h"
 
 #include <iostream>
 #include <fstream>
@@ -38,6 +42,7 @@ class ModelCheck {
     bool is_intersecting = false; //! A triangulated surface mesh self-intersects.
     bool is_producing_self_intersecting = false; //! Number of intersections between a subset of faces of a triangulated surface mesh.
 
+    double read_time = 0;
     double check_time = 0;                      //! The time spent inspecting the model.
 
     /*!
@@ -46,10 +51,9 @@ class ModelCheck {
     void checkConnectedComponents(Mesh mesh);
 
     /*!
-     * \brief Determine whether there are holes in the mesh.
+     * \brief Determine whether there are borders in the mesh.
      */
-    void checkHoles(Mesh mesh);
-
+    bool checkBorder(Mesh mesh);
     /*!
      * \brief Determine whether the mesh is self-intersecting.
      */
@@ -58,14 +62,16 @@ class ModelCheck {
     /*!
      * \brief Check the model for errors.
      */
-    void checkModel(std::string input_file);
+    void checkModel(std::string input_file, std::string output_file);
+
+    void writeMesh(std::string output_file, Mesh& mesh);
 
     /*!
      * \brief Test interface.
      */
     void checkTest1();
 
-    bool checkTest(std::string file_name);
+    bool checkTest(std::string file_name, std::string output_file);
 };
 
 }

@@ -99,7 +99,6 @@ enum class SimplifyType
     EDGE_COUNT_STOP,
     EDGE_RATIO_STOP
 };
-
 } // namespace lunarmp
 
 #endif // LUBANENGINE_SRC_SETTINGS_ENUMSETTINGS_H_
