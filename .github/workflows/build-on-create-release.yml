@@ -22,7 +22,7 @@ jobs:
 
       - name: install deps
         run: |
-          brew install gmp
+#          brew install gmp
           brew install mpfr
           brew install boost
           brew install eigen
