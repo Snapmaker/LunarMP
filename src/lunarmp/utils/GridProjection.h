@@ -1,0 +1,10 @@
+//
+// Created by Cyril on 2022/7/26.
+//
+
+#ifndef LUNARMP_SRC_LUNARMP_UTILS_GRIDPROJECTION_H_
+#define LUNARMP_SRC_LUNARMP_UTILS_GRIDPROJECTION_H_
+
+class GridProjection {};
+
+#endif  // LUNARMP_SRC_LUNARMP_UTILS_GRIDPROJECTION_H_
