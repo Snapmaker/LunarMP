@@ -10,7 +10,6 @@
 #include <CGAL/Surface_mesh_simplification/edge_collapse.h>
 
 #include "../data/DataGroup.h"
-#include "../utils/Enums.h"
 #include "ModelBase.h"
 
 // edgeCollapseGarlandHeckbert
@@ -40,7 +39,7 @@ class ModelSimplification {
   public:
     int remove_edge = 0;               //! The total number of edges removed in the model simplification.
     double simplification_time = 0.0;  //! The time spent simplifying the model.
-
+    double read_time = 0.0;
     /*!
      * \brief Read file
      *
@@ -87,6 +86,8 @@ class ModelSimplification {
      *
      */
     void modelSimplification(std::string input_file, std::string output_file, DataGroup& data_group);
+
+    void writeMesh(std::string output_file, Mesh& mesh);
 };
 
 }  // namespace lunarmp

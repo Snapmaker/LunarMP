@@ -38,6 +38,13 @@ if( NOT GMP_in_cache )
     PATH_SUFFIXES lib
     DOC "Path to the Release GMP library"
     )
+  find_library(GMPXX_LIBRARY_RELEASE NAMES libgmpxx.a
+          HINTS ENV GMP_LIB_DIR
+          ENV GMP_DIR
+          ${CGAL_INSTALLATION_PACKAGE_DIR}/auxiliary/gmp/lib
+          PATH_SUFFIXES lib
+          DOC "Path to the Release GMPXX library"
+          )
 
   find_library(GMP_LIBRARY_DEBUG NAMES libgmp.a gmp.a gmpd gmp libgmp-10 mpir
     HINTS ENV GMP_LIB_DIR
@@ -46,15 +53,22 @@ if( NOT GMP_in_cache )
     PATH_SUFFIXES lib
     DOC "Path to the Debug GMP library"
     )
+  find_library(GMPXX_LIBRARY_DEBUG NAMES libgmpxx.a
+          HINTS ENV GMP_LIB_DIR
+          ENV GMP_DIR
+          ${CGAL_INSTALLATION_PACKAGE_DIR}/auxiliary/gmp/lib
+          PATH_SUFFIXES lib
+          DOC "Path to the Debug GMPXX library"
+          )
 
   get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
   if(IS_MULTI_CONFIG)
     set(GMP_LIBRARIES debug ${GMP_LIBRARY_DEBUG} optimized ${GMP_LIBRARY_RELEASE})
   else()
     if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-      set(GMP_LIBRARIES ${GMP_LIBRARY_DEBUG})
+      set(GMP_LIBRARIES ${GMP_LIBRARY_DEBUG} ${GMPXX_LIBRARY_DEBUG})
     else()
-      set(GMP_LIBRARIES ${GMP_LIBRARY_RELEASE})
+      set(GMP_LIBRARIES ${GMP_LIBRARY_RELEASE} ${GMPXX_LIBRARY_RELEASE})
     endif()
   endif()
 
