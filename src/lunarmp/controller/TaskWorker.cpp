@@ -22,7 +22,9 @@ void TaskWorker::runNext() {
     Task task = tasks.front();
     tasks.pop_front();
 
-    switch (str2int(task.cmd.c_str())) {
+    std::string lower_cmd = sToLower(task.cmd);
+
+    switch (str2int(lower_cmd.c_str())) {
         case str2int("modelrepair"):
             m_model_controller.repair(task.data_group);
             break;
