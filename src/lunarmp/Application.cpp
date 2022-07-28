@@ -98,6 +98,15 @@ void Application::modelCompare() {
     communication = new CommandLine(arguments);
 }
 
+void Application::modelNesting() {
+    std::vector<std::string> arguments;
+    for (size_t argument_index = 0; argument_index < argc; argument_index++) {
+        arguments.emplace_back(argv[argument_index]);
+    }
+
+    communication = new CommandLine(arguments);
+}
+
 void Application::run(const size_t argc, char** argv) {
     this->argc = argc;
     this->argv = argv;
@@ -131,6 +140,8 @@ void Application::run(const size_t argc, char** argv) {
         modelCheck();
     } else if (stringcasecompare(argv[1], "modelcompare") == SUCCESS) {
         modelCompare();
+    } else if (stringcasecompare(argv[1], "modelnesting") == SUCCESS) {
+        modelNesting();
     } else if (stringcasecompare(argv[1], "help") == 0) {
         //        printHelp();
     } else if (stringcasecompare(argv[1], "version") == 0) {

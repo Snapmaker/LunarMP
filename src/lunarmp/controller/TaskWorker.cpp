@@ -37,6 +37,9 @@ void TaskWorker::runNext() {
         case str2int("modelcompare"):
             m_model_controller.compare(task.data_group);
             break;
+        case str2int("modelnesting"):
+            m_model_controller.nesting(task.data_group);
+            break;
     }
 }
 

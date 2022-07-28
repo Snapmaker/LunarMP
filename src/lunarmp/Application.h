@@ -94,6 +94,8 @@ class Application {
 
     void modelCompare();
 
+    void modelNesting();
+
   private:
     /*
      * \brief The number of arguments that the application was called with.

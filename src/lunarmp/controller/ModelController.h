@@ -11,6 +11,7 @@ class ModelController {
     void check(DataGroup& data_group);
     void simplification(DataGroup& data_group);
     void compare(DataGroup& data_group);
+    void nesting(DataGroup& data_group);
 };
 
 }  // namespace lunarmp

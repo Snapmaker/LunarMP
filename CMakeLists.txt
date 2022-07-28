@@ -21,6 +21,7 @@ set(PROJECT_SRCS
         src/lunarmp/model/ModelRepair.cpp
         src/lunarmp/model/ModelCompare.cpp
         src/lunarmp/model/ModelSimplification.cpp
+        src/lunarmp/model/ModelNesting.cpp
 
         src/lunarmp/test/ModelTest.cpp
 

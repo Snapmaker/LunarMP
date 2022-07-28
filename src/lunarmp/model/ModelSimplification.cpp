@@ -92,7 +92,8 @@ void ModelSimplification::modelSimplification(std::string input_file, std::strin
         }
         case SimplifyType::EDGE_RATIO_STOP: {
             auto edge_ratio_threshold = data_group.settings.get<double>("edge_ratio_threshold");
-            edgeCollapseGarlandHeckbert(mesh, edge_ratio_threshold);
+//            edgeCollapseGarlandHeckbert(mesh, edge_ratio_threshold);
+            edgeCollapseBoundedNormalChange(mesh, edge_ratio_threshold * CGAL::vertices(mesh).size());
             simplification_time = t.time();
             break;
         }

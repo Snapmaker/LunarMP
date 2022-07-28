@@ -6,6 +6,7 @@
 #include "../model/ModelRepair.h"
 #include "../model/ModelCompare.h"
 #include "../model/ModelSimplification.h"
+#include "../model/ModelNesting.h"
 
 namespace lunarmp {
 
@@ -33,13 +34,20 @@ void ModelController::simplification(DataGroup& data_group) {
     model_simplification.modelSimplification(input_path, output_path, data_group);
 }
 
-
 void ModelController::compare(DataGroup& data_group) {
     auto input_path = data_group.settings.get<std::string>("input_path");
     auto output_path = data_group.settings.get<std::string>("output_path");
 
     ModelCompare model_compare;
     model_compare.modelCompare(input_path, output_path, 0.01);
+}
+
+void ModelController::nesting(DataGroup& data_group) {
+    auto input_path = data_group.settings.get<std::string>("input_path");
+    auto output_path = data_group.settings.get<std::string>("output_path");
+
+    ModelNesting model_nesting;
+    model_nesting.modelNesting(input_path, output_path, data_group);
 }
 
 }  // namespace lunarmp
