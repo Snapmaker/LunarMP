@@ -80,8 +80,16 @@ double approximate(double a, int bit = 6) {
     return round(a * 1e6) * 1e-6;
 }
 
+bool isEqual(double a, double b) {
+    return (approximate(a - b) == 0);
+}
+
+bool isEqualPoint(Point_2 a, Point_2 b) {
+    return isEqual(a.x(), b.x()) && isEqual(a.y(), b.y());
+}
+
 bool getDirection(Point_2 a, Point_2 b) {
-    if (approximate(a.x() - b.x()) == 0) {
+    if (isEqual(a.x(), b.x())) {
         return approximate(a.y() - b.y()) < 0;
     }
     else {
@@ -89,9 +97,9 @@ bool getDirection(Point_2 a, Point_2 b) {
     }
 }
 
-bool isParallel(Segment_2 a, Segment_2 b) {
-    return a.is_degenerate() || b.is_degenerate() ||
-           a.direction() == b.direction() ||
+
+bool isParallel(Segment_2& a, Segment_2& b) {
+    return a.direction() == b.direction() ||
            a.direction() == -b.direction();
 }
 
@@ -214,6 +222,37 @@ std::list<Polygon_with_holes_2> differencePolygon(Polygon_with_holes_2 sub, Poly
 //std::list<Polygon_with_holes_2> offsetPolygon(Polygon_with_holes_2& sub, double offset, std::string type) {
 //
 //}
+
+void coutPoints(std::vector<double>& points) {
+    for (int i = 0; i < points.size(); i++) {
+        if (i == points.size() - 1) {
+            std::cout << points[i];
+        }
+        else {
+            std::cout << points[i] << ",";
+        }
+    }
+}
+
+void coutTraceLines(std::vector<TraceLine> tLines) {
+    std::vector<double> st_x;
+    std::vector<double> st_y;
+    std::vector<double> ed_x;
+    std::vector<double> ed_y;
+    for (TraceLine tl : tLines) {
+        Point_2 st = tl.l.source();
+        Point_2 ed = tl.l.target();
+        st_x.emplace_back(approximate(st.x()));
+        st_y.emplace_back(approximate(st.y()));
+        ed_x.emplace_back(approximate(ed.x()));
+        ed_y.emplace_back(approximate(ed.y()));
+    }
+    std::cout << "ST_X = ["; coutPoints(st_x); std::cout << "]\n";
+    std::cout << "ST_Y = ["; coutPoints(st_y); std::cout << "]\n";
+    std::cout << "ED_X = ["; coutPoints(ed_x); std::cout << "]\n";
+    std::cout << "ED_Y = ["; coutPoints(ed_y); std::cout << "]\n";
+}
+
 
 
 }

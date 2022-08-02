@@ -149,7 +149,7 @@ bool ModelNesting::readFile(std::string input_file) {
 //
 //}
 
-void ModelNesting::getRotatePolygons(Polygon_with_holes_2& rotate_polygon, int i, Point_2& rotateCenter, Point_2 center) {
+void ModelNesting::getRotatePolygons(Polygon_with_holes_2& rotate_polygon, int i, Point_2& rotateCenter, Point_2& center) {
     rotatePolygons(rotate_polygon, i, center);
     roundAndMulPolygons(rotate_polygon);
 
@@ -159,7 +159,7 @@ void ModelNesting::getRotatePolygons(Polygon_with_holes_2& rotate_polygon, int i
     rotateCenter = add(center, offset);
 }
 
-void ModelNesting::polygon2Vectors(Polygon_2 polygon, std::vector<TraceLine>& vectors) {
+void ModelNesting::polygon2Vectors(Polygon_2& polygon, std::vector<TraceLine>& vectors) {
     std::vector<Point_2> points = getVertices(polygon);
     for (int i = 0; i < points.size(); i++) {
         Point_2 p1 = points[i];
@@ -170,7 +170,7 @@ void ModelNesting::polygon2Vectors(Polygon_2 polygon, std::vector<TraceLine>& ve
     }
 }
 
-void ModelNesting::calculateTraceLines(Polygon_2 anglePolygon, Polygon_2 linesPolygon, std::vector<TraceLine>& trace_lines) {
+void ModelNesting::calculateTraceLines(Polygon_2& anglePolygon, Polygon_2& linesPolygon, std::vector<TraceLine>& trace_lines) {
     std::vector<TraceLine> line_vectors;
     polygon2Vectors(linesPolygon, line_vectors);
 //    printTraceLines(line_vectors, false);
@@ -205,7 +205,7 @@ void ModelNesting::calculateTraceLines(Polygon_2 anglePolygon, Polygon_2 linesPo
     }
 }
 
-void ModelNesting::generateTraceLine(Polygon_2 plate, Polygon_2 part, Point_2 center, std::vector<TraceLine>& trace_lines) {
+void ModelNesting::generateTraceLine(Polygon_2& plate, Polygon_2& part, Point_2& center, std::vector<TraceLine>& trace_lines) {
     // 1. part-angle is in contact with plate-edge
     std::vector<TraceLine> trace_lines1;
     calculateTraceLines(part, plate, trace_lines1);
@@ -226,35 +226,49 @@ void ModelNesting::generateTraceLine(Polygon_2 plate, Polygon_2 part, Point_2 ce
 //    printTraceLines(trace_lines, false);
 }
 
-bool cmpDirection1(Point_2 a, Point_2 b) {
-    if (approximate(a.x() - b.x()) == 0) {
-        return approximate(a.y() - b.y()) < 0;
-    }
-    else {
-        return approximate(a.x() - b.x()) < 0;
-    }
+bool cmpDirection1(Point_2& a, Point_2& b) {
+    return isEqual(a.x(), b.x()) ? approximate(a.y() - b.y()) : approximate(a.x() - b.x());
 }
 
-bool cmpDirection2(Point_2 a, Point_2 b) {
-    if (approximate(a.x() - b.x()) == 0) {
-        return approximate(b.y() - b.y()) < 0;
+bool cmpDirection2(Point_2& a, Point_2& b) {
+    return isEqual(a.x(), b.x()) ? approximate(b.y() - a.y()) : approximate(b.x() - a.x());
+}
+
+bool cmp2(TraceLine& a, TraceLine& b) {
+    if (!isEqual(a.l.source().x(), b.l.source().x())) {
+        return approximate(a.l.source().x() - b.l.source().x());
     }
-    else {
-        return approximate(b.x() - b.x()) < 0;
+    if (!isEqual(a.l.source().x(), b.l.source().x())) {
+        return approximate(a.l.source().x() - b.l.source().x());
     }
+    if (!isEqual(a.l.source().x(), b.l.source().x())) {
+        return approximate(a.l.source().x() - b.l.source().x());
+    }
+    if (!isEqual(a.l.source().x(), b.l.source().x())) {
+        return approximate(a.l.source().x() - b.l.source().x());
+    }
+    return 0;
 }
 
 void ModelNesting::processCollinear(std::vector<TraceLine>& trace_lines) {
-    std::vector<std::vector<Point_2>>trace_inter_points;
-    for (int i = 0; trace_lines.size(); i++) {
-        TraceLine tLine1 = trace_lines[i];
+    coutTraceLines(trace_lines);
 
+    std::vector<TraceLine> new_trace_lines;
+    if (trace_lines.size() == 0) {
+        return ;
+    }
+    std::vector<std::vector<Point_2>>trace_inter_points;
+    std::cout << "size: " << trace_lines.size() << std::endl;
+    for (int i = 0; i < trace_lines.size(); i++) {
+        const TraceLine tLine1 = trace_lines[i];
+
+        std::cout << "i: " << i << std::endl;
         std::vector<Point_2> inter_points;
         for (int j = 0; j < trace_lines.size(); j++) {
             if (i == j) {
                 continue;
             }
-            TraceLine tLine2 = trace_lines[j];
+            const TraceLine tLine2 = trace_lines[j];
 
             if (parallel(tLine1.l, tLine2.l)) {
 //                if (tLine1.l.collinear_has_on(tLine2.l.source())) {
@@ -263,6 +277,9 @@ void ModelNesting::processCollinear(std::vector<TraceLine>& trace_lines) {
 //                if (tLine1.l.collinear_has_on(tLine2.l.target())) {
 //                    inter_points.emplace_back(tLine2.l.target());
 //                }
+                if (K::CollinearHasOn_2(tLine1, tLine2.l.source())) {
+                    inter_points.emplace_back(tLine2.l.source());
+                }
             }
 //            else {
 //                const auto result = intersection(tLine1.l, tLine2.l);
@@ -272,28 +289,55 @@ void ModelNesting::processCollinear(std::vector<TraceLine>& trace_lines) {
 //                    }
 //                }
 //            }
-//            std::cout << "S: " << inter_points.size() << std::endl;
-//            trace_inter_points.emplace_back(inter_points);
+            trace_inter_points.emplace_back(inter_points);
         }
+        std::cout << "trace: " << tLine1.l << std::endl;
+        printPoints(inter_points);
+        std::cout << "\n";
     }
-//    log("end1\n");
-//    for (int i = 0; trace_lines.size(); i++) {
+
+//    for (int i = 0; i < trace_lines.size(); i++) {
 //        TraceLine tLine = trace_lines[i];
-////        std::vector<Point_2> inter_points = trace_inter_points[i];
+//        std::vector<Point_2> inter_points = trace_inter_points[i];
 //
-////        bool sort_direction = getDirection(tLine.l.source(), tLine.l.target());
-////        if (sort_direction) {
-////            std::sort(inter_points.begin(), inter_points.end(), cmpDirection1);
-////        }
-////        else {
-////            std::sort(inter_points.begin(), inter_points.end(), cmpDirection2);
-////        }
-////        std::cout << "\n";
-////        for (Point_2 p : inter_points) {
-////            std::cout << "[" << p.x() << "," << p.y() << "]\t";
-////        }
+//        if (inter_points.size() > 2) {
+//            bool sort_direction = getDirection(tLine.l.source(), tLine.l.target());
+//            if (sort_direction) {
+//                std::sort(inter_points.begin(), inter_points.end(), cmpDirection1);
+//            }
+//            else {
+//                std::sort(inter_points.begin(), inter_points.end(), cmpDirection2);
+//            }
+//        }
+//
+//        Point_2 last_point = tLine.l.source();
+//        for (Point_2 p : inter_points) {
+//            if (isEqualPoint(last_point, p)) {
+//                continue;
+//            }
+//            new_trace_lines.emplace_back(TraceLine(Segment_2(last_point, p)));
+//            last_point = p;
+//        }
+//        if (!isEqualPoint(last_point, tLine.l.target())) {
+//            new_trace_lines.emplace_back(TraceLine(Segment_2(last_point, tLine.l.target())));
+//        }
 //    }
-//    log("\nend");
+
+//    // Delete the same segment
+//    sort(new_trace_lines.begin(), new_trace_lines.end(), cmp2);
+//    std::vector<TraceLine> res_trace_lines;
+//    res_trace_lines.emplace_back(new_trace_lines[0]);
+//    TraceLine last_trace_line = res_trace_lines[0];
+//    for (int i = 1; i < new_trace_lines.size(); i++) {
+//        const TraceLine tl = new_trace_lines[i];
+//        if (isEqualPoint(last_trace_line.l.source(), tl.l.source()) &&
+//            isEqualPoint(last_trace_line.l.target(), tl.l.target())) {
+//            continue;
+//        }
+//        last_trace_line = tl;
+//        res_trace_lines.emplace_back(tl);
+//    }
+//    trace_lines = res_trace_lines;
 }
 
 //void ModelNesting::deleteOutTraceLine(std::vector<TraceLine>& trace_lines, Plate platePolygon, Point_2 center){
@@ -304,8 +348,10 @@ void ModelNesting::processCollinear(std::vector<TraceLine>& trace_lines) {
 //
 //}
 
-void ModelNesting::mergeTraceLines2Polygon(Polygon_2 plate, Point_2 center, std::vector<TraceLine>& trace_lines, std::vector<std::vector<TraceLine>>& nfp_rings) {
+void ModelNesting::mergeTraceLines2Polygon(Polygon_2& plate, Point_2& center, std::vector<TraceLine>& trace_lines, std::vector<std::vector<TraceLine>>& nfp_rings) {
+    log("processCollinear\n");
     processCollinear(trace_lines);
+    log("deleteOutTraceLine\n");
 //    deleteOutTraceLine(trace_lines, plate, center);
 //
 //    std::vector<TraceLine> new_trace_lines;
@@ -324,7 +370,7 @@ void ModelNesting::mergeTraceLines2Polygon(Polygon_2 plate, Point_2 center, std:
 //
 //}
 
-bool ModelNesting::generateNFP(Plate plate, Part part, Part& result_part) {
+bool ModelNesting::generateNFP(Plate& plate, Part& part, Part& result_part) {
     log("generateNFP.\n");
 
     for (int i = 0; i < 360; i += rotate) {
@@ -359,7 +405,7 @@ bool ModelNesting::generateNFP(Plate plate, Part part, Part& result_part) {
 }
 
 // 没写完
-void ModelNesting::updateCurrentPlate(Plate plate, std::list<Polygon_with_holes_2> pwhs) {
+void ModelNesting::updateCurrentPlate(Plate& plate, std::list<Polygon_with_holes_2>& pwhs) {
     log("partPlacement.\n");
     std::list<Polygon_with_holes_2>::const_iterator it;
 
@@ -387,7 +433,7 @@ void ModelNesting::updateCurrentPlate(Plate plate, std::list<Polygon_with_holes_
     }
 }
 
-bool ModelNesting::partPlacement(Plate plate, Part part, Part& result_part) {
+bool ModelNesting::partPlacement(Plate& plate, Part& part, Part& result_part) {
     log("partPlacement.\n");
     if (!generateNFP(plate, part, result_part)) {
         return false;
@@ -406,7 +452,7 @@ bool ModelNesting::partPlacement(Plate plate, Part part, Part& result_part) {
     return true;
 }
 
-bool cmp (Plate a, Plate b) {
+bool cmp (Plate& a, Plate& b) {
     return a.abs_area > b.abs_area;
 }
 void ModelNesting::sortPlates(std::vector<Plate>& plates) {

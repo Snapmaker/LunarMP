@@ -90,45 +90,45 @@ class ModelNesting {
         }
     }
 
-    bool sortPolygon(Polygon_2 polygon, bool clock_wise);
+    bool sortPolygon(Polygon_2& polygon, bool clock_wise);
 
     void sortParts(std::vector<Part>& parts);
 
     void sortPlates(std::vector<Plate>& plates);
 
-    void updatePolygonPosition(Polygon_with_holes_2& polygon, Point_2 pos);
+    void updatePolygonPosition(Polygon_with_holes_2& polygon, Point_2& pos);
 
-    void polygon2Vectors(Polygon_2 polygon, std::vector<TraceLine>& vectors);
+    void polygon2Vectors(Polygon_2& polygon, std::vector<TraceLine>& vectors);
 
-    void calculateTraceLines(Polygon_2 anglePolygon, Polygon_2 linesPolygon, std::vector<TraceLine>& trace_lines);
+    void calculateTraceLines(Polygon_2& anglePolygon, Polygon_2& linesPolygon, std::vector<TraceLine>& trace_lines);
 
-    void generateTraceLine(Polygon_2 plate, Polygon_2 part, Point_2 center, std::vector<TraceLine>& trace_lines);
+    void generateTraceLine(Polygon_2& plate, Polygon_2& part, Point_2& center, std::vector<TraceLine>& trace_lines);
 
     void processCollinear(std::vector<TraceLine>& trace_lines);
 
-    void deleteOutTraceLine(std::vector<TraceLine>& trace_lines, Plate platePolygon, Point_2 center);
+    void deleteOutTraceLine(std::vector<TraceLine>& trace_lines, Plate& platePolygon, Point_2& center);
 
-    void mergeTraceLines2Polygon(Polygon_2 plate, Point_2 center, std::vector<TraceLine>& trace_lines, std::vector<std::vector<TraceLine>>& nfp_rings);
+    void mergeTraceLines2Polygon(Polygon_2& plate, Point_2& center, std::vector<TraceLine>& trace_lines, std::vector<std::vector<TraceLine>>& nfp_rings);
 
-    void traverTraceLines(std::vector<TraceLine> trace_lines, std::vector<TraceLine>& new_trace_lines);
+    void traverTraceLines(std::vector<TraceLine>& trace_lines, std::vector<TraceLine>& new_trace_lines);
 
     void deleteNoRingSegments(std::vector<Segment_2>& trace_lines);
 
-    void setMinPoint(Point_2 lowerPoint, Point_2 point);
+    void setMinPoint(Point_2& lowerPoint, Point_2& point);
 
     int searchLowerStartPointIndex(std::vector<Segment_2>& nfpLines);
 
-    Point_2 searchLowerPosition(std::vector<Segment_2> nfpLines);
+    Point_2 searchLowerPosition(std::vector<Segment_2>& nfpLines);
 
     void standardizedPolygons(std::vector<Polygon_2>& rotatePolygons);
 
-    void getRotatePolygons(Polygon_with_holes_2& polygon, int i, Point_2& rotateCenter, Point_2 center);
+    void getRotatePolygons(Polygon_with_holes_2& polygon, int i, Point_2& rotateCenter, Point_2& center);
 
-    bool generateNFP(Plate plate, Part part, Part& result_part);
+    bool generateNFP(Plate& plate, Part& part, Part& result_part);
 
-    void updateCurrentPlate(Plate plate, std::list<Polygon_with_holes_2> pwhs);
+    void updateCurrentPlate(Plate& plate, std::list<Polygon_with_holes_2>& pwhs);
 
-    bool partPlacement(Plate plate, Part part, Part& result_part);
+    bool partPlacement(Plate& plate, Part& part, Part& result_part);
 
     void startNFP();
 
