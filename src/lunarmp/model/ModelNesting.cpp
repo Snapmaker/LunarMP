@@ -263,6 +263,7 @@ void ModelNesting::processCollinear(std::vector<TraceLine>& trace_lines) {
         const TraceLine tLine1 = trace_lines[i];
 
         std::cout << "i: " << i << std::endl;
+        std::cout << "trace: " << tLine1.l.source() << ',' << tLine1.l.target() << std::endl;
         std::vector<Point_2> inter_points;
         for (int j = 0; j < trace_lines.size(); j++) {
             if (i == j) {
@@ -271,31 +272,29 @@ void ModelNesting::processCollinear(std::vector<TraceLine>& trace_lines) {
             const TraceLine tLine2 = trace_lines[j];
 
             if (parallel(tLine1.l, tLine2.l)) {
-//                if (tLine1.l.collinear_has_on(tLine2.l.source())) {
-//                    inter_points.emplace_back(tLine2.l.source());
-//                }
-//                if (tLine1.l.collinear_has_on(tLine2.l.target())) {
-//                    inter_points.emplace_back(tLine2.l.target());
-//                }
-                if (K::CollinearHasOn_2(tLine1, tLine2.l.source())) {
+                if (tLine1.l.collinear_has_on(tLine2.l.source())) {
                     inter_points.emplace_back(tLine2.l.source());
                 }
+                if (tLine1.l.collinear_has_on(tLine2.l.target())) {
+                    inter_points.emplace_back(tLine2.l.target());
+                }
             }
-//            else {
-//                const auto result = intersection(tLine1.l, tLine2.l);
-//                if (result) {
-//                    if (const Point_2* p = boost::get<Point_2 >(&*result)) {
-//                        inter_points.emplace_back(Point_2(approximate((*p).x()), approximate((*p).y())));
-//                    }
-//                }
-//            }
-            trace_inter_points.emplace_back(inter_points);
+            else {
+                const auto result = intersection(tLine1.l, tLine2.l);
+                if (result) {
+                    if (const Point_2* p = boost::get<Point_2 >(&*result)) {
+                        inter_points.emplace_back(Point_2(approximate((*p).x()), approximate((*p).y())));
+                    }
+                }
+            }
         }
-        std::cout << "trace: " << tLine1.l << std::endl;
-        printPoints(inter_points);
+//        printPoints(inter_points);
+
+        trace_inter_points.emplace_back(inter_points);
+//        std::cout << "trace: " << tLine1.l << std::endl;
         std::cout << "\n";
     }
-
+//
 //    for (int i = 0; i < trace_lines.size(); i++) {
 //        TraceLine tLine = trace_lines[i];
 //        std::vector<Point_2> inter_points = trace_inter_points[i];
@@ -322,7 +321,7 @@ void ModelNesting::processCollinear(std::vector<TraceLine>& trace_lines) {
 //            new_trace_lines.emplace_back(TraceLine(Segment_2(last_point, tLine.l.target())));
 //        }
 //    }
-
+//
 //    // Delete the same segment
 //    sort(new_trace_lines.begin(), new_trace_lines.end(), cmp2);
 //    std::vector<TraceLine> res_trace_lines;
