@@ -5,19 +5,14 @@
 #ifndef LUNARMP_SRC_LUNARMP_MODEL_MODELNESTING_H_
 #define LUNARMP_SRC_LUNARMP_MODEL_MODELNESTING_H_
 
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Polygon_with_holes_2.h>
-#include <CGAL/offset_polygon_2.h>
-#include <CGAL/Polygon_2.h>
-#include <CGAL/Timer.h>
-
 #include <CGAL/Boolean_set_operations_2.h>
 
-#include "../../rapidjson/rapidjson/ostreamwrapper.h"
+//#include "../../rapidjson/rapidjson/ostreamwrapper.h"
 #include "../../rapidjson/rapidjson/document.h"
 #include "../../rapidjson/rapidjson/writer.h"
 #include "../utils/logoutput.h"
 #include "../data/DataGroup.h"
+#include "../polygon/PolygonBase.h"
 
 #include <string>
 #include <vector>
@@ -25,40 +20,30 @@
 #include <iostream>
 #include <list>
 
-typedef CGAL::Exact_predicates_inexact_constructions_kernel                 K;
-typedef CGAL::Polygon_2<K>                                                  Polygon_2;
-typedef CGAL::Polygon_with_holes_2<K>                                       Polygon_with_holes_2;
-typedef K::Segment_2                                                        Segment_2;
-typedef K::Point_2                                                          Point_2;
-typedef K::Vector_2                                                         Vector_2;
-typedef K::FT                                                               FT;
-
-
 namespace lunarmp {
 
-struct TraceLine {
-    Vector_2 line;
+class TraceLine {
+  public:
+    Segment_2 l;
+    Point_2 p;
+    Vector_2 v;
 
+    TraceLine() {};
+    TraceLine(Segment_2 line) : l(line) {};
+    TraceLine(Vector_2 vec, Point_2 pos) : v(vec), p(pos) {};
 };
 
 class Plate {
   public:
-    Polygon_2 polygon;
+    Polygon_with_holes_2 polygon;
     double area;
-    double absArea;
+    double abs_area;
     int id;
 
     Plate() {};
     Plate(Polygon_2 poly) : polygon(poly){};
 
     void sort();
-    void print() {
-        std::cout << "plate:" << std::endl;
-        for (Point_2 p : polygon) {
-            std::cout << "(" << p.x() << ", " << p.y() << ")" << std::endl;
-        }
-        std::cout << "area: " << area << std::endl;
-    }
 };
 
 class Part {
@@ -66,33 +51,18 @@ class Part {
     Part() {};
     ~Part() {};
 
-    Polygon_2 polygon;
-    Polygon_2 rotate_polygon;
+    Polygon_with_holes_2 polygon;
+    Polygon_with_holes_2 rotate_polygon;
     Point_2 position;
     Point_2 center;
     double area;
-    double absArea;
+    double abs_area;
     int angle;
     bool in_place;
     bool is_rotated = false;
     int id;
 
     void sort();
-    void print() {
-        std::cout << "id: " << id << std::endl;
-        std::cout << "polygon:" << std::endl;
-        for (Point_2 p : polygon) {
-            std::cout << "(" << p.x() << ", " << p.y() << ")" << std::endl;
-        }
-        std::cout << "rotate_polygon:" << std::endl;
-        for (Point_2 p : rotate_polygon) {
-            std::cout << "(" << p.x() << ", " << p.y() << ")" << std::endl;
-        }
-        std::cout << "position: (" << position.x() << ", " << position.y() << ")" << std::endl;
-        std::cout << "center: (" << center.x() << ", " << center.y() << ")" << std::endl;
-        std::cout << "angle: " << angle << std::endl;
-        std::cout << "in_place: " << in_place << std::endl;
-    }
 };
 
 class ModelNesting {
@@ -109,7 +79,16 @@ class ModelNesting {
     int offset = 0;
     int interval = 2;
 
-
+    void printTraceLines(std::vector<TraceLine> tls, bool hasPos) {
+        std::cout << "Size: " << tls.size() << std::endl;
+        for (TraceLine tl: tls) {
+            std::cout << "st: (" << tl.l.source().x() << ", " << tl.l.source().y() << ")\tend: (" << tl.l.target().x() << "," << tl.l.target().y() << ")" << std::endl;
+            if (hasPos) {
+                std::cout << "pos: (" << tl.p.x() << ", " << tl.p.y() << std::endl;
+            }
+//            std::cout << "v: (" << tl.v.x() << ", " << tl.v.y() << std::endl;
+        }
+    }
 
     bool sortPolygon(Polygon_2 polygon, bool clock_wise);
 
@@ -117,28 +96,21 @@ class ModelNesting {
 
     void sortPlates(std::vector<Plate>& plates);
 
-    Polygon_2 roundAndMulPolygons(Polygon_2 polygon, double limit);
+    void updatePolygonPosition(Polygon_with_holes_2& polygon, Point_2 pos);
 
-    Point_2 roundAndMulPoint(Point_2 point, double limit);
+    void polygon2Vectors(Polygon_2 polygon, std::vector<TraceLine>& vectors);
 
-    void updatePolygonPosition(Polygon_2& polygon, Point_2 pos);
-
-    std::list<Polygon_with_holes_2> differencePolygon(Polygon_2 sub, Polygon_2 clip);
-    std::list<Polygon_with_holes_2> offsetPolygon(Polygon_with_holes_2& sub, double offset, std::string type);
-
-    void polygon2Vector(Polygon_2 polygon, std::vector<Point_2>& vectors);
-
-    void calculateTraceLine(std::vector<Polygon_2> anglePolygon, std::vector<Polygon_2> linesPolygon, std::vector<Segment_2>& trace_lines);
+    void calculateTraceLines(Polygon_2 anglePolygon, Polygon_2 linesPolygon, std::vector<TraceLine>& trace_lines);
 
     void generateTraceLine(Polygon_2 plate, Polygon_2 part, Point_2 center, std::vector<TraceLine>& trace_lines);
 
-    void processCollinear(std::vector<Segment_2>& trace_lines);
+    void processCollinear(std::vector<TraceLine>& trace_lines);
 
-    void processCollinearOnlyHVLines(std::vector<Segment_2>& trace_lines);
-
-    void deleteOutTraceLine(std::vector<Segment_2>& trace_lines, std::vector<Segment_2>& newTraceLines, Plate platePolygon, Point_2 center);
+    void deleteOutTraceLine(std::vector<TraceLine>& trace_lines, Plate platePolygon, Point_2 center);
 
     void mergeTraceLines2Polygon(Polygon_2 plate, Point_2 center, std::vector<TraceLine>& trace_lines, std::vector<std::vector<TraceLine>>& nfp_rings);
+
+    void traverTraceLines(std::vector<TraceLine> trace_lines, std::vector<TraceLine>& new_trace_lines);
 
     void deleteNoRingSegments(std::vector<Segment_2>& trace_lines);
 
@@ -146,11 +118,11 @@ class ModelNesting {
 
     int searchLowerStartPointIndex(std::vector<Segment_2>& nfpLines);
 
-    Point_2 searchLowerPosition(std::vector<TraceLine> nfpLines);
+    Point_2 searchLowerPosition(std::vector<Segment_2> nfpLines);
 
     void standardizedPolygons(std::vector<Polygon_2>& rotatePolygons);
 
-    void getRotatePolygons(Polygon_with_holes_2& polygon, int i, Point_2& center);
+    void getRotatePolygons(Polygon_with_holes_2& polygon, int i, Point_2& rotateCenter, Point_2 center);
 
     bool generateNFP(Plate plate, Part part, Part& result_part);
 
