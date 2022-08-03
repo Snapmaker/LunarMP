@@ -6,12 +6,14 @@
 #define LUNARMP_SRC_LUNARMP_UTILS_POLYGONBASE_H_
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Boolean_set_operations_2.h>
-#include <CGAL/Kernel/global_functions.h>
 #include <CGAL/Polygon_with_holes_2.h>
-#include <CGAL/offset_polygon_2.h>
 #include <CGAL/Polygon_2.h>
+
+#include <CGAL/Kernel/global_functions.h>
 #include <CGAL/intersection_2.h>
+
+#include <CGAL/create_offset_polygons_from_polygon_with_holes_2.h>
+#include <CGAL/Boolean_set_operations_2.h>
 
 #include <cmath>
 
@@ -26,5 +28,5 @@ typedef K::FT                                                               FT;
 typedef Polygon_2::Vertex_iterator                                          VertexIterator;
 typedef Polygon_2::Edge_const_iterator                                      EdgeIterator;
 
-
+typedef boost::shared_ptr<Polygon_with_holes_2>                             Pwh_ptr;
 #endif  // LUNARMP_SRC_LUNARMP_UTILS_POLYGONBASE_H_

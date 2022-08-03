@@ -35,7 +35,7 @@ void printPolygon(const Polygon_2& P)
 
     std::cout << "[ " << P.size() << " vertices:";
     for (vit = P.vertices_begin(); vit != P.vertices_end(); ++vit) {
-        std::cout << " (" << *vit << ')';
+        std::cout << " (" << (*vit).x() << "," << (*vit).y() << ')';
     }
     std::cout << " ]" << std::endl;
     return;
@@ -50,24 +50,21 @@ void printPolygonWithHoles(const Polygon_with_holes_2& pwh) {
         std::cout << "{ Unbounded polygon." << std::endl;
     }
 
-    Polygon_with_holes_2::Hole_const_iterator  hit;
     unsigned int k = 1;
 
     std::cout << "  " << pwh.number_of_holes() << " holes:" << std::endl;
-    for (hit = pwh.holes_begin(); hit != pwh.holes_end(); ++hit, ++k) {
-        std::cout << "    Hole #" << k << " = ";
-        printPolygon (*hit);
+    for (Polygon_2 hit : pwh.holes()) {
+        std::cout << "    Hole #" << k++ << " = ";
+        printPolygon (hit);
     }
     std::cout << " }" << std::endl;
     return;
 }
 
-void printPolygons(std::list<Polygon_with_holes_2>& pwhs) {
-    std::list<Polygon_with_holes_2>::const_iterator it;
+void printPolygons(std::vector<Polygon_with_holes_2>& pwhs) {
     int i = 0;
-    for (it = pwhs.begin(); it != pwhs.end(); ++it) {
+    for (Polygon_with_holes_2 pwh : pwhs) {
         std::cout << "i: " << i++ << std::endl;
-        Polygon_with_holes_2 pwh = *it;
         printPolygonWithHoles(pwh);
     }
 }
@@ -167,10 +164,9 @@ void rotatePolygons(Polygon_with_holes_2& polygon, int i, Point_2 center) {
     Polygon_2 outer = rotatePolygon(polygon.outer_boundary(), i, center);
 
     if (polygon.number_of_holes() > 0) {
-        std::vector<Polygon_2> inner(polygon.number_of_holes());
-        Polygon_with_holes_2::Hole_const_iterator hit;
-        for (hit = polygon.holes_begin(); hit != polygon.holes_end(); ++hit) {
-            inner.push_back(rotatePolygon(*hit, i, center));
+        std::vector<Polygon_2> inner;
+        for (Polygon_2 hole : polygon.holes()) {
+            inner.push_back(rotatePolygon(hole, i, center));
         }
         polygon = Polygon_with_holes_2(outer, inner.begin(), inner.end());
     }
@@ -199,10 +195,9 @@ void movePolygons(Polygon_with_holes_2& polygon, Point_2 offset) {
     Polygon_2 outer = movePolygon(polygon.outer_boundary(), offset);
 
     if (polygon.number_of_holes() > 0) {
-        std::vector<Polygon_2> inner(polygon.number_of_holes());
-        Polygon_with_holes_2::Hole_const_iterator hit;
-        for (hit = polygon.holes_begin(); hit != polygon.holes_end(); ++hit) {
-            inner.push_back(movePolygon(*hit, offset));
+        std::vector<Polygon_2> inner;
+        for (Polygon_2 hole : polygon.holes()) {
+            inner.push_back(movePolygon(hole, offset));
         }
         polygon = Polygon_with_holes_2(outer, inner.begin(), inner.end());
     }
@@ -211,17 +206,51 @@ void movePolygons(Polygon_with_holes_2& polygon, Point_2 offset) {
     }
 }
 
-std::list<Polygon_with_holes_2> differencePolygon(Polygon_with_holes_2 sub, Polygon_with_holes_2 clip) {
+double getPwhArea(Polygon_with_holes_2 pwh) {
+    double area = 0.0;
+    area += pwh.outer_boundary().area();
+
+    if (pwh.number_of_holes() > 0) {
+        for (Polygon_2 hole : pwh.holes()) {
+            area -= hole.area();
+        }
+    }
+    return area;
+}
+
+Polygon_with_holes_2 differencePolygon(Polygon_2& sub, Polygon_2& clip) {
     std::list<Polygon_with_holes_2> pwhs;
     CGAL::difference(sub, clip, std::back_inserter(pwhs), CGAL::Tag_true());
 
-
-    return pwhs;
+    return pwhs.front();
 }
 
-//std::list<Polygon_with_holes_2> offsetPolygon(Polygon_with_holes_2& sub, double offset, std::string type) {
-//
-//}
+
+std::vector<Polygon_with_holes_2> getPwhs(std::vector<Pwh_ptr> offset_poly_with_holes_ptr) {
+    std::vector<Polygon_with_holes_2> res;
+    for (typename std::vector<Pwh_ptr>::const_iterator pi = offset_poly_with_holes_ptr.begin() ; pi != offset_poly_with_holes_ptr.end() ; ++ pi ) {
+        printPolygonWithHoles(**pi);
+        res.emplace_back(**pi);
+    }
+    return res;
+}
+
+Polygon_with_holes_2 offsetPolygon(Polygon_with_holes_2& poly, double offset) {
+    log("offset\n");
+    if (poly.number_of_holes() == 0) {
+        std::vector<Polygon_with_holes_2> offset_poly_with_holes = getPwhs(CGAL::create_exterior_skeleton_and_offset_polygons_with_holes_2(offset, poly));
+        if (offset > 0) {
+            return offset_poly_with_holes[0];
+        }
+        if (offset < 0) {
+            return offset_poly_with_holes[1];
+        }
+    }
+    else {
+        std::vector<Polygon_with_holes_2> offset_poly_with_holes = getPwhs(CGAL::create_interior_skeleton_and_offset_polygons_with_holes_2(offset, poly));
+        return offset_poly_with_holes[0];
+    }
+}
 
 void coutPoints(std::vector<double>& points) {
     for (int i = 0; i < points.size(); i++) {
@@ -234,19 +263,20 @@ void coutPoints(std::vector<double>& points) {
     }
 }
 
-void coutTraceLines(std::vector<TraceLine> tLines) {
+void coutLines(std::vector<Segment_2> tLines) {
     std::vector<double> st_x;
     std::vector<double> st_y;
     std::vector<double> ed_x;
     std::vector<double> ed_y;
-    for (TraceLine tl : tLines) {
-        Point_2 st = tl.l.source();
-        Point_2 ed = tl.l.target();
+    for (Segment_2 tl : tLines) {
+        Point_2 st = tl.source();
+        Point_2 ed = tl.target();
         st_x.emplace_back(approximate(st.x()));
         st_y.emplace_back(approximate(st.y()));
         ed_x.emplace_back(approximate(ed.x()));
         ed_y.emplace_back(approximate(ed.y()));
     }
+    std::cout <<"len: " << tLines.size() << std::endl;
     std::cout << "ST_X = ["; coutPoints(st_x); std::cout << "]\n";
     std::cout << "ST_Y = ["; coutPoints(st_y); std::cout << "]\n";
     std::cout << "ED_X = ["; coutPoints(ed_x); std::cout << "]\n";
