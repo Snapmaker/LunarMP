@@ -1,15 +1,15 @@
 //
 // Created by Cyril on 2022/7/26.
 //
+#pragma once
 
 #ifndef LUNARMP_SRC_LUNARMP_MODEL_MODELNESTING_H_
 #define LUNARMP_SRC_LUNARMP_MODEL_MODELNESTING_H_
 
-#include <CGAL/Boolean_set_operations_2.h>
-
-//#include "../../rapidjson/rapidjson/ostreamwrapper.h"
+#include "../../rapidjson/rapidjson/filewritestream.h"
 #include "../../rapidjson/rapidjson/document.h"
-#include "../../rapidjson/rapidjson/writer.h"
+#include "../../rapidjson/rapidjson/prettywriter.h"
+//#include "../../rapidjson/rapidjson/writer.h"
 #include "../utils/logoutput.h"
 #include "../data/DataGroup.h"
 #include "../polygon/PolygonBase.h"
@@ -43,43 +43,74 @@ class Plate {
     Plate() {};
     Plate(Polygon_2 poly) : polygon(poly){};
 
-    void sort();
+    void init() {
+        area = polygon.outer_boundary().area();
+        abs_area = std::fabs(area);
+
+//        std::cout << "area: " << area << std::endl;
+//        std::cout << "abs area: " << abs_area << std::endl;
+    }
+    void printPlate();
 };
 
 class Part {
   public:
     Part() {};
-    Part(Point_2 p, int angle, Point_2 c, Polygon_with_holes_2 poly) : position(p), angle_step(angle), center(c), rotate_polygon(poly) {};
+    Part(Point_2 p, Point_2 c, Polygon_with_holes_2 poly) : position(p), center(c), rotate_polygon(poly) {};
 
     ~Part() {};
 
     Polygon_with_holes_2 polygon;
     Polygon_with_holes_2 rotate_polygon;
-    Point_2 position;
-    Point_2 center;
-    double area;
-    double abs_area;
-    int angle_step;
-    bool in_place;
-    bool is_rotated = false;
-    int id;
+    Point_2 position = Point_2(-1, -1);
+    Point_2 center = Point_2(-1, -1);
+    double area = 0;
+    double abs_area = 0;
+    bool in_place = false;
+    int id = -1;
+    bool is_group = false;
 
-    void sort();
+    void init() {
+        area = polygon.outer_boundary().area();
+        abs_area = std::fabs(area);
+//        std::cout << "area: " << area << std::endl;
+//        std::cout << "abs area: " << abs_area << std::endl;
+    }
+    void printPart();
+    void updateArea() {
+        area = rotate_polygon.outer_boundary().area();
+        abs_area = std::fabs(area);
+    }
+};
+
+class PartGroup {
+  public:
+    PartGroup() {};
+    PartGroup(std::vector<Part> models) : models(models) {};
+    ~PartGroup() {};
+
+    int id_group = -1;
+    std::vector<Part> models;
 };
 
 class ModelNesting {
   private:
-    double accuracy = 10;
+    double accuracy = 1;
     double min_part_area = 0;
     int plate_offset = 10;
 
   public:
     std::vector<Part> parts;
+    std::vector<PartGroup> part_groups;
     std::vector<Plate> plates;
     std::vector<Part> result_parts;
+    std::vector<PartGroup> result;
     int rotate = 360;
     int offset = 0;
-    int interval = 2;
+    int limit_edge = 2;
+    bool is_rotation = false;
+
+    void initialize(std::vector<Plate>& plate, std::vector<Part>& part);
 
     void printTraceLines(std::vector<TraceLine> tls, bool hasPos) {
         std::cout << "Size: " << tls.size() << std::endl;
@@ -92,13 +123,9 @@ class ModelNesting {
         }
     }
 
-    bool sortPolygon(Polygon_2& polygon, bool clock_wise);
+//    bool sortPolygon(Polygon_2& polygon, bool clock_wise);
 
-    void sortParts(std::vector<Part>& parts);
-
-    void sortPlates(std::vector<Plate>& plates);
-
-    void updatePolygonPosition(Polygon_with_holes_2& polygon, Point_2& pos);
+//    void updatePolygonPosition(Polygon_with_holes_2& polygon, Point_2& pos);
 
     void polygon2Vectors(Polygon_2& polygon, std::vector<TraceLine>& vectors);
 
@@ -114,19 +141,21 @@ class ModelNesting {
 
     void traverTraceLines(std::vector<Segment_2>& trace_lines, std::vector<Segment_2>& new_trace_lines);
 
-    void deleteNoRingSegments(std::vector<Segment_2>& trace_lines);
+//    void deleteNoRingSegments(std::vector<Segment_2>& trace_lines);
 
-    void setMinPoint(Point_2& lowerPoint, Point_2& point);
+//    void setMinPoint(Point_2& lowerPoint, Point_2& point);
 
     int searchLowerStartPointIndex(std::vector<Segment_2>& nfpLines);
 
     Point_2 searchLowerPosition(std::vector<Segment_2>& nfp_lines);
 
-    void standardizedPolygons(std::vector<Polygon_2>& rotate_polygons);
+//    void standardizedPolygons(std::vector<Polygon_2>& rotate_polygons);
 
     void getRotatePolygons(Polygon_with_holes_2& polygon, int i, Point_2& rotateCenter, Point_2& center);
 
     void generateNFP(Plate& plate, Part& part, Part& result_part);
+
+//    Polygon_2 updateCurrentPolygon(Plate& plate, Polygon_2& poly, Polygon_with_holes_2& pwhs);
 
     void updateCurrentPlate(Plate& plate, Polygon_with_holes_2& pwhs);
 
@@ -136,7 +165,9 @@ class ModelNesting {
 
     bool readFile(std::string input_file);
 
-    void writeFile(std::string output_file);
+    bool writeFile(std::string output_file);
+
+    void createJson(rapidjson::Document& doc);
 
     void modelNesting(std::string input_file, std::string output_file, DataGroup& data_group);
 };

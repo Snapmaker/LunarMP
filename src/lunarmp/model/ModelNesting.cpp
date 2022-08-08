@@ -3,19 +3,71 @@
 //
 
 #include "ModelNesting.h"
+
+#include "../polygon/PolygonUtils.h"
+#include "../polygon/PolygonBool.h"
+#include "../polygon/AngleRange.h"
+
 #include <algorithm>
+#include <cstdio>
 #include <set>
 #include <map>
 
-#include "../polygon/PolygonUtils.h"
-#include "../polygon/AngleRange.h"
-
 namespace lunarmp {
+void Plate::printPlate() {
+    std::cout << "id: " << id << std::endl;
+    std::cout << "area: " << area << "\tabsArea:" << abs_area << std::endl;
+    std::cout << "Polygon: \n";
+    printPolygonWithHoles(polygon);
+}
+
+void Part::printPart() {
+    std::cout << "id: " << id << std::endl;
+    std::cout << "area: " << area << "\tabsArea:" << abs_area << std::endl;
+    std::cout << "position: " << position << std::endl;
+    std::cout << "center: " << center << std::endl;
+    std::cout << "Polygon: \n";
+    printPolygonWithHoles(polygon);
+    std::cout << "Rotate_polygon: \n";
+    printPolygonWithHoles(rotate_polygon);
+}
+
+Polygon_2 readPolygon(const rapidjson::Value& polyV) {
+    if (polyV.Size() == 0) {
+        logError("--- Empty poly value\n");
+        return Polygon_2();
+    }
+
+    Polygon_2 polygon;
+    for (int i = 0; i < polyV.Size(); i++) {
+        const rapidjson::Value& point = polyV[i];
+        polygon.push_back(Point_2(point[0].GetDouble(), point[1].GetDouble()));
+    }
+
+    return polygon;
+}
+
+Polygon_with_holes_2 readPolygonWithHoles(const rapidjson::Value& polysV) {
+    const rapidjson::Value& outerV = polysV[0];
+    Polygon_2 outer = readPolygon(outerV);
+    if (polysV.Size() > 1) {
+        std::vector<Polygon_2> holes;
+        for (int i = 1; i < polysV.Size(); i++) {
+            const rapidjson::Value& hols = polysV[i];
+            holes.emplace_back(readPolygon(hols));
+        }
+        return Polygon_with_holes_2(outer, holes.begin(), holes.end());
+    }
+
+    return Polygon_with_holes_2(outer);
+}
 
 bool ModelNesting::readFile(std::string input_file) {
+    log("read file\n");
+
     std::ifstream ifs(input_file);
     if (!ifs) {
-        std::cout << "Invaild input!" << std::endl;
+        logError("Invaild input!\n");
         return false;
     }
     std::string str((std::istreambuf_iterator<char>(ifs)),
@@ -28,132 +80,178 @@ bool ModelNesting::readFile(std::string input_file) {
         Plate plate;
         const rapidjson::Value& plateV = doc["plate"];
         if(plateV.HasMember("polygon")) {
-            const rapidjson::Value& polyV = plateV["polygon"];
-            if (polyV.HasMember("x") && polyV.HasMember("y")) {
-                const rapidjson::Value& x = polyV["x"];
-                const rapidjson::Value& y = polyV["y"];
-                if (x.IsArray() && y.IsArray()){
-                    Polygon_2 outer;
-                    for (int i = 0; i < x.Size(); i++) {
-                        outer.push_back(Point_2(x[i].GetDouble(), y[i].GetDouble()));
-                    }
-                    plate.area = outer.area();
-                    plate.abs_area = std::fabs(plate.area);
-                    plate.polygon = Polygon_with_holes_2(outer);
-//                    printPolygonWithHoles(plate.polygon);
-                }
-            }
+            plate.polygon = Polygon_with_holes_2(readPolygon(plateV["polygon"]));
         }
         plates.emplace_back(plate);
     }
 
-    if (doc.HasMember("parts")) {
-        const rapidjson::Value& partsV = doc["parts"];
-        if (partsV.IsArray()) {
-            for (int i = 0; i < partsV.Size(); i++) {
-                const rapidjson::Value& partV = partsV[i];
+
+    if (doc.HasMember("rotation")) {
+        is_rotation = doc["rotation"].GetBool();
+        rotate = doc["angle"].GetInt();
+    }
+    else {
+        logError("File does not exist 'rotation'.\n");
+        exit(2);
+    }
+    if (doc.HasMember("rotation_step_degree")) {
+        rotate = doc["rotation_step_degree"].GetInt();
+    }
+    else {
+        logError("File does not exist 'rotation'.\n");
+        exit(2);
+    }
+
+    if (doc.HasMember("distance")) {
+        offset = doc["distance"].GetInt();
+    }
+    else {
+        logError("File does not exist 'offset'.\n");
+        exit(2);
+    }
+
+    if (doc.HasMember("items")) {
+        const rapidjson::Value& itemsV = doc["items"];
+        if (itemsV.IsArray()) {
+            for (int i = 0; i < itemsV.Size(); i++) {
+                const rapidjson::Value& itemV = itemsV[i];
                 Part part;
-                if (partV.HasMember("id")) {
-                    part.id = partV["id"].GetInt();
+                if (itemV.HasMember("id")) {
+                    part.id = itemV["id"].GetInt();
                 }
-                if (partV.HasMember("polygon")) {
-                    const rapidjson::Value& polys = partV["polygon"];
-                    if (polys.IsArray()) {
-                        Polygon_2 outer;
-                        std::vector<Polygon_2> inner;
-                        for (int j = 0; j < polys.Size(); j++) {
-                            const rapidjson::Value& poly = polys[j];
-                            Polygon_2 p;
-                            if (poly.HasMember("x") && poly.HasMember("y")) {
-                                const rapidjson::Value& x = poly["x"];
-                                const rapidjson::Value& y = poly["y"];
-                                if (x.IsArray() && y.IsArray()){
-                                    for (int k = 0; k < x.Size(); k++) {
-                                        p.push_back(Point_2(x[k].GetDouble(), y[k].GetDouble()));
-                                    }
-                                }
-                            }
-                            if (j == 0) {
-                                outer = p;
-                                part.area = outer.area();
-                                part.abs_area = std::fabs(part.area);
-                            }
-                            else {
-                                inner.emplace_back(p);
-                            }
-                        }
-                        part.polygon = Polygon_with_holes_2(outer, inner.begin(), inner.end());
-//                        printPolygonWithHoles(part.polygon);
+                if (itemV.HasMember("polygon_with_holes")) {
+                    const rapidjson::Value& pwh = itemV["polygon_with_holes"];
+                    part.polygon = Polygon_with_holes_2(readPolygonWithHoles(pwh));
+                    part.init();
+
+                    if (itemV.HasMember("center")) {
+                        part.center = Point_2(itemV["center"][0].GetDouble(), itemV["center"][1].GetDouble());
                     }
+                    else {
+                        part.center = getCenter(part.polygon);
+                    }
+
+                    parts.emplace_back(part);
                 }
-                if (partV.HasMember("center")) {
-                    const rapidjson::Value& c = partV["center"];
-                    part.center = Point_2(c["x"].GetDouble(), c["y"].GetDouble());
-                }
-                parts.emplace_back(part);
+
+//                PartGroup group;
+//                if (itemsV.HasMember("id")) {
+//                    group.id_group = itemsV["id"].GetInt();
+//                }
+//
+//                if (itemsV.HasMember("polygon_group")) {
+//                    const rapidjson::Value& partsV = itemsV["polygon_group"];
+//                    if (partsV.IsArray()) {
+//                        for (int j = 0; j < partsV.Size(); j++) {
+//                            Part part;
+//                            part.is_group = true;
+//                            const rapidjson::Value& part_groupV = partsV[j];
+//
+//                            if (part_groupV.HasMember("id")) {
+//                                part.id_model = part_groupV["id"].GetInt();
+//                            }
+//                            if (part_groupV.HasMember("polygon_with_holes")) {
+//                                const rapidjson::Value& pwh = part_groupV["polygon_with_holes"];
+//                                part.polygon = Polygon_with_holes_2(readPolygonWithHoles(pwh));
+//                                part.init();
+//                                group.models.emplace_back(part);
+//                                printPolygonWithHoles(part.polygon);
+//                            }
+//                        }
+//                    }
+//                }
+//                else if (itemsV.HasMember("polygon_with_holes")) {
+//                    const rapidjson::Value& pwh = itemsV["polygon_with_holes"];
+//                    Part part;
+//                    part.polygon = Polygon_with_holes_2(readPolygonWithHoles(pwh));
+//                    part.init();
+//                    group.models.emplace_back(part);
+//                }
+//                part_groups.emplace_back(group);
             }
         }
     }
-    if (doc.HasMember("angle")) {
-        rotate = doc["angle"].GetInt();
+    else {
+        logError("File does not exist 'items'.\n");
+        exit(2);
     }
-    if (doc.HasMember("offset")) {
-        offset = doc["offset"].GetInt();
-    }
+
     return true;
 }
 
-//void ModelNesting::writeFile(std::string output_file) {
-//    rapidjson::Document doc;
-//    doc.SetObject();
-//    rapidjson::Document::AllocatorType& allocator = allocator;
-//    rapidjson::Value res(rapidjson::kArrayType);
-//
-//    for (Part part : result_parts) {
-//        rapidjson::Value p(rapidjson::kObjectType);
-//        // model id
-//        p.AddMember("id", part.id, allocator);
-//        // polygon
-//        std::vector<Point_2> points(part.rotate_polygon.vertices_begin(), part.rotate_polygon.vertices_end());
-//        rapidjson::Value poly(rapidjson::kArrayType);
-//        for (Point_2 p : points) {
-//            rapidjson::Value point(rapidjson::kObjectType);
-//            point.AddMember("x", p.x(), allocator);
-//            point.AddMember("y", p.y(), allocator);
-//            poly.PushBack(point, allocator);
-//        }
-//        p.AddMember("polygon", poly, allocator);
-//        // position
-//        rapidjson::Value position(rapidjson::kObjectType);
-//        position.AddMember("x", part.position.x(), allocator);
-//        position.AddMember("y", part.position.y(), allocator);
-//        p.AddMember("position", position, allocator);
-//        // center
-//        rapidjson::Value center(rapidjson::kObjectType);
-//        center.AddMember("x", part.center.x(), allocator);
-//        center.AddMember("y", part.center.y(), allocator);
-//        p.AddMember("center", center, allocator);
-//        // in place
-//        p.AddMember("in_place", part.in_place, allocator);
-//
-//        res.PushBack(p, allocator);
-//    }
-//
-//    std::ofstream ofs(output_file);
-//    rapidjson::OStreamWrapper osw(ofs);
-//
-//    rapidjson::Writer<rapidjson::OStreamWrapper> writer(osw);
-//    doc.Accept(writer);
-//}
-//
-//void ModelNesting::updatePolygonPosition(Polygon_with_holes_2& polygon, Point_2 pos) {
-//
-//}
+rapidjson::Value writePoint(Point_2 p, rapidjson::Document::AllocatorType& allocator) {
+    rapidjson::Value point(rapidjson::kArrayType);
+    point.PushBack(p.x(), allocator);
+    point.PushBack(p.y(), allocator);
+    return point;
+}
+
+rapidjson::Value writePolygon(Polygon_2 polygon, rapidjson::Document::AllocatorType& allocator) {
+    rapidjson::Value point_array(rapidjson::kArrayType);
+    for (Polygon_2::Vertex_const_iterator vit = polygon.vertices_begin(); vit != polygon.vertices_end(); ++vit) {
+        point_array.PushBack(writePoint(*vit, allocator), allocator);
+    }
+    return point_array;
+}
+
+void writePolygonWithHoles(rapidjson::Value &polygons, Polygon_with_holes_2 pwh, rapidjson::Document::AllocatorType& allocator) {
+    rapidjson::Value polys(rapidjson::kArrayType);
+    polygons.PushBack(writePolygon(pwh.outer_boundary(), allocator), allocator);
+
+    if (pwh.number_of_holes() > 0) {
+        for (Polygon_2 poly : pwh.holes()) {
+            polygons.PushBack(writePolygon(poly, allocator), allocator);
+        }
+    }
+}
+
+void ModelNesting::createJson(rapidjson::Document& doc) {
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    rapidjson::Value part_array(rapidjson::kArrayType);
+
+    for (Part part : result_parts) {
+        rapidjson::Value part_obj(rapidjson::kObjectType);
+        part_obj.SetObject();
+        part_obj.AddMember("id", part.id, allocator);
+        part_obj.AddMember("position", writePoint(part.position, allocator), allocator);
+        part_obj.AddMember("center", writePoint(part.center, allocator), allocator);
+
+        rapidjson::Value polygons(rapidjson::kArrayType);
+        writePolygonWithHoles(polygons, part.rotate_polygon, allocator);
+
+        part_obj.AddMember("polygon", polygons, allocator);
+        part_array.PushBack(part_obj, allocator);
+    }
+
+    doc.AddMember("final_parts", part_array, allocator);
+}
+
+bool ModelNesting::writeFile(std::string output_file) {
+    log("write\n");
+    FILE* file = fopen(output_file.c_str(), "wb");
+    if (!file) {
+        logError("Couldn't write JSON file: %s\n", output_file.c_str());
+        return false;
+    }
+
+    rapidjson::Document doc;
+    createJson(doc);
+
+    char writeBuffer[4096];
+    rapidjson::FileWriteStream os(file, writeBuffer, sizeof(writeBuffer));
+
+    rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(os);
+    doc.Accept(writer);
+    fclose(file);
+
+    return true;
+}
 
 void ModelNesting::getRotatePolygons(Polygon_with_holes_2& rotate_polygon, int i, Point_2& rotateCenter, Point_2& center) {
     rotatePolygons(rotate_polygon, i, center);
     roundAndMulPolygons(rotate_polygon);
-
     Point_2 offset = Point_2(-rotate_polygon.bbox().xmin(), -rotate_polygon.bbox().ymin());
     movePolygons(rotate_polygon, offset);
     rotateCenter = add(center, offset);
@@ -173,8 +271,6 @@ void ModelNesting::polygon2Vectors(Polygon_2& polygon, std::vector<TraceLine>& v
 void ModelNesting::calculateTraceLines(Polygon_2& anglePolygon, Polygon_2& linesPolygon, std::vector<TraceLine>& trace_lines) {
     std::vector<TraceLine> line_vectors;
     polygon2Vectors(linesPolygon, line_vectors);
-//    printTraceLines(line_vectors, false);
-//    std::cout << "!!!!!!!!\n";
     std::vector<Point_2> points = getVertices(anglePolygon);
 
     for (int i = 0; i < points.size(); i++) {
@@ -207,6 +303,7 @@ void ModelNesting::generateTraceLine(Polygon_2& plate, Polygon_2& part, Point_2&
     // 1. part-angle is in contact with plate-edge
     std::vector<TraceLine> trace_lines1;
     calculateTraceLines(part, plate, trace_lines1);
+
     for (TraceLine tLine : trace_lines1) {
         Point_2 p1 = add(center, sub(tLine.l.source(), tLine.p));
         Point_2 p2 = add(center, sub(tLine.l.target(), tLine.p));
@@ -249,12 +346,10 @@ bool cmp2(Segment_2& a, Segment_2& b) {
 }
 
 void ModelNesting::processCollinear(std::vector<Segment_2>& trace_lines) {
-//    printTraceLines(trace_lines, true);
     if (trace_lines.size() == 0) {
-//        logWarning("processCollinear: None Lines\n");
+        logError("processCollinear: None TraceLines! \n");
         return ;
     }
-//    std::cout << "size: " << trace_lines.size() << std::endl;
 
     std::vector<std::vector<Point_2>>trace_inter_points;
     for (int i = 0; i < trace_lines.size(); i++) {
@@ -284,7 +379,6 @@ void ModelNesting::processCollinear(std::vector<Segment_2>& trace_lines) {
                 }
             }
         }
-//        printPoints(inter_points);
         trace_inter_points.emplace_back(inter_points);
     }
     std::vector<Segment_2> new_trace_lines;
@@ -317,7 +411,6 @@ void ModelNesting::processCollinear(std::vector<Segment_2>& trace_lines) {
 
     // Delete the same segment
     sort(new_trace_lines.begin(), new_trace_lines.end(), cmp2);
-//    coutLines(new_trace_lines);
     std::vector<Segment_2> res_trace_lines;
     res_trace_lines.emplace_back(new_trace_lines[0]);
     Segment_2 last_trace_line = res_trace_lines[0];
@@ -331,10 +424,6 @@ void ModelNesting::processCollinear(std::vector<Segment_2>& trace_lines) {
         res_trace_lines.emplace_back(last_trace_line);
     }
     trace_lines = res_trace_lines;
-//    std::cout << "----------------------\n";
-//    coutLines(trace_lines);
-//    printTraceLines(new_trace_lines, true);
-//    std::cout << "----------------------\n";
 }
 
 void ModelNesting::deleteOutTraceLine(std::vector<Segment_2>& trace_lines, Polygon_2& platePolygon, Point_2& center){
@@ -346,17 +435,15 @@ void ModelNesting::deleteOutTraceLine(std::vector<Segment_2>& trace_lines, Polyg
 
     for (int i = 0; i < trace_lines.size(); i++) {
         Segment_2 line = trace_lines[i];
-        if (line.source() == line.target()) {
+        if (line.is_degenerate()) {
             continue;
         }
-        if (!platePolygon.has_on_bounded_side(line.source()) || !platePolygon.has_on_bounded_side(line.target())) {
+        if (platePolygon.has_on_positive_side(line.source()) || platePolygon.has_on_positive_side(line.target())) {
             continue;
         }
         new_trace_lines.emplace_back(trace_lines[i]);
     }
     trace_lines = new_trace_lines;
-//    coutLines(trace_lines);
-
 }
 
 bool lessThanLowerPoint(Point_2 point1, Point_2 point2) {
@@ -393,28 +480,6 @@ std::vector<Segment_2> filterTraceLine(std::vector<Segment_2>& trace_lines, std:
     return res;
 }
 
-void coutMap(std::map<long long, std::vector<int>>& m) {
-    for(auto it : m){
-        std::vector<int> val = it.second;
-        std::cout << "key: " << it.first << std::endl;
-        std::cout << "value:   size:" << val.size() << std::endl;
-        std::cout << "    ";
-        for (int index : val) {
-            std::cout << index << "    ";
-        }
-        std::cout << std::endl;
-    }
-}
-
-void coutSet(std::set<int>& s) {
-    std::cout << "set: \n";
-    std::cout << "    ";
-    for (int it : s) {
-        std::cout << it << "    ";
-    }
-    std::cout << std::endl;
-}
-
 void ModelNesting::traverTraceLines(std::vector<Segment_2>& trace_lines, std::vector<Segment_2>& new_trace_lines) {
     new_trace_lines.clear();
 //    log("traverTraceLines\n");
@@ -442,7 +507,6 @@ void ModelNesting::traverTraceLines(std::vector<Segment_2>& trace_lines, std::ve
              }
              trace_index_map[key].emplace_back(i);
         }
-//        coutMap(trace_index_map);
 
         int current_point_index = lower_index;
         int circle_cnt = 0;
@@ -491,12 +555,6 @@ void ModelNesting::traverTraceLines(std::vector<Segment_2>& trace_lines, std::ve
                 break;
             }
         }
-//        std::cout << "trace_index:" << std::endl;
-//        for (int i = 0; i < trace_index.size(); i++) {
-//            std::cout << trace_index[i] << "    ";
-//        }
-//        std::cout << std::endl;
-//        coutSet(trace_index_set);
 
         int cycle_index = -1;
         int last_index = trace_index[trace_index.size() - 1];
@@ -519,11 +577,7 @@ void ModelNesting::traverTraceLines(std::vector<Segment_2>& trace_lines, std::ve
                 }
                 new_trace_lines.emplace_back(trace_lines[i]);
             }
-//            std::cout << "trace_cycle_set" << std::endl;
-//            coutSet(trace_cycle_set);
         }
-//        std::cout << "new_trace_lines" << std::endl;
-//        coutLines(new_trace_lines);
 
         std::set<int> delete_set;
         for (int i = 0; i < trace_index.size(); i++) {
@@ -531,8 +585,7 @@ void ModelNesting::traverTraceLines(std::vector<Segment_2>& trace_lines, std::ve
             delete_set.insert(index);
         }
         trace_lines = filterTraceLine(trace_lines, delete_set);
-//        std::cout << "new_trace_lines" << std::endl;
-//        coutLines(new_trace_lines);
+
         if (new_trace_lines.size() > 0) {
             return ;
         }
@@ -549,11 +602,9 @@ void ModelNesting::mergeTraceLines2Polygon(Polygon_2& plate, Point_2& center, st
 
     log(" - find nfps.\n");
     std::vector<Segment_2> new_trace_lines;
-    int i = 0;
     while(true) {
         traverTraceLines(trace_lines, new_trace_lines);
         if (new_trace_lines.size() > 0) {
-//            coutLines(new_trace_lines);
             nfp_rings.emplace_back(new_trace_lines);
         }
         else {
@@ -580,10 +631,10 @@ void ModelNesting::generateNFP(Plate& plate, Part& part, Part& result_part) {
     log("generateNFP.\n");
 
     for (int i = 0; i < 360; i += rotate) {
+        std::cout << "step: " << i << std::endl;
         Polygon_with_holes_2 rotated_poly = part.polygon;
         Point_2 rotated_center;
         getRotatePolygons(rotated_poly, i, rotated_center, part.center);
-        std::cout << "angle:" << i << std::endl;
 
         std::vector<Segment_2> trace_lines;
         generateTraceLine(plate.polygon.outer_boundary(), rotated_poly.outer_boundary(), rotated_center, trace_lines);
@@ -591,24 +642,25 @@ void ModelNesting::generateNFP(Plate& plate, Part& part, Part& result_part) {
         mergeTraceLines2Polygon(plate.polygon.outer_boundary(), rotated_center, trace_lines, nfp_rings);
 
         if (nfp_rings.empty()) {
+            log("%d, nfp ring is none!\n");
             continue;
         }
 
         Point_2 lower_point(-1.0, -1.0);
         for (std::vector<Segment_2> nfp_lines : nfp_rings) {
             Point_2 lower_point_tmp = searchLowerPosition(nfp_lines);
-            std::cout << "lower_point_tmp: " << lower_point_tmp << std::endl;
 
             Polygon_with_holes_2 movePolygon = rotated_poly;
             movePolygons(movePolygon, sub(lower_point_tmp, rotated_center));
-//            std::cout << "movePolygon: " << std::endl;
-//            printPolygonWithHoles(movePolygon);
-            Polygon_with_holes_2 diff_polygons = differencePolygon(plate.polygon.outer_boundary(), movePolygon.outer_boundary());
 
-//            printPolygons(diff_polygons);
+            std::vector<Polygon_with_holes_2>  diff_polygons = polygonDifference( movePolygon.outer_boundary(), plate.polygon.outer_boundary());
+
             // to
-            if(!diff_polygons.outer_boundary().is_empty()) {
-                double tmp_area = getPwhArea(diff_polygons);
+            if(diff_polygons.size() > 0 && !diff_polygons[0].is_unbounded()) {
+                double tmp_area = 0;
+                for (Polygon_with_holes_2 pwh : diff_polygons) {
+                    tmp_area += getPwhArea(pwh);
+                }
 
                 if(tmp_area > accuracy * accuracy) {
                     continue;
@@ -616,12 +668,15 @@ void ModelNesting::generateNFP(Plate& plate, Part& part, Part& result_part) {
             }
             lower_point = lower_point_tmp;
         }
-        if (lower_point == Point_2(-1.0, -1.0)) {
+
+        if (isEqual(lower_point.x(), -1) && isEqual(lower_point.y(), -1)) {
             continue;
         }
 
-        Part rp(lower_point, i, rotated_center, rotated_poly);
-        if (i == 0) {
+        Part rp(lower_point, rotated_center, rotated_poly);
+        rp.updateArea();
+
+        if (result_part.polygon.is_unbounded()) {
             result_part = rp;
         }
         else {
@@ -630,54 +685,92 @@ void ModelNesting::generateNFP(Plate& plate, Part& part, Part& result_part) {
             }
         }
     }
+    return;
 }
 
 
-void ModelNesting::updateCurrentPlate(Plate& plate, Polygon_with_holes_2& pwh) {
-    Polygon_with_holes_2 offset_poly = offsetPolygon(pwh, -plate_offset);
-    Point_2 inner_polys;
-    for
+void ModelNesting::updateCurrentPlate(Plate& plate, Polygon_with_holes_2& diff_plate_polygons) {
+    log("--------updateCurrentPlate\n");
+    coutPwh(diff_plate_polygons);
+    Polygon_with_holes_2 offset_poly = polygonOffset(diff_plate_polygons, -plate_offset);
+    log("11111111111111111111\n");
+    std::cout << "offset_poly\n";
+    coutPwh(offset_poly);
+
+    Polygon_with_holes_2 offset_polys = polygonOffset(offset_poly, plate_offset);
+    log("222222222222222222\n");
+    std::cout << "offset_polys\n";
+    coutPwh(offset_polys);
+
+    Polygon_2 outer_poly = offset_polys.outer_boundary();
+    log("333333333333\n");
+
+    roundAndMulPolygon(outer_poly);
+    log("44444444444444\n");
+
+    Polygon_with_holes_2 union_poly = polygonIntersection(diff_plate_polygons, outer_poly);
+    log("5555555555555555\n");
+
+    if (union_poly.is_unbounded()) {
+        plate.abs_area = 0;
+    }
+    else {
+        if (union_poly.outer_boundary().area() > 0){
+            reversePolygon(union_poly);
+        }
+        plate.polygon = union_poly;
+        plate.init();
+    }
+    log("--------updateCurrentPlate End\n");
 
 }
 
+bool cmpPwhs(Polygon_with_holes_2& a, Polygon_with_holes_2& b) {
+    return a.outer_boundary().area() > b.outer_boundary().area();
+}
 bool ModelNesting::partPlacement(Plate& plate, Part& part, Part& result_part) {
-    log("partPlacement.\n");
+    log("- partPlacement.\n");
+
     generateNFP(plate, part, result_part);
-    if (!result_part.rotate_polygon.outer_boundary().is_empty()) {
+
+    if (result_part.rotate_polygon.is_unbounded()) {
         return false;
     }
 
-    roundAndMulPoint(result_part.position);
+    result_part.position = roundAndMulPoint(result_part.position);
 
     movePolygons(result_part.rotate_polygon, sub(result_part.position, result_part.center));
 
-    Polygon_with_holes_2 diff_plate_polygons = differencePolygon(plate.polygon.outer_boundary(), result_part.rotate_polygon.outer_boundary());
+    std::vector<Polygon_with_holes_2> diff_plate_polygons = polygonDifference(plate.polygon.outer_boundary(), result_part.rotate_polygon.outer_boundary());
 
-    updateCurrentPlate(plate, diff_plate_polygons);
+    if (diff_plate_polygons.size() > 1) {
+        std::sort(diff_plate_polygons.begin(), diff_plate_polygons.end(), cmpPwhs);
+    }
+    part.in_place = true;
+
+    updateCurrentPlate(plate, diff_plate_polygons[0]);
+
+    if (result_part.rotate_polygon.number_of_holes() > 0) {
+        for (Polygon_2 hole : result_part.rotate_polygon.holes()) {
+            plates.emplace_back(Plate(hole));
+        }
+    }
 
     return true;
 }
 
-bool cmp (Plate& a, Plate& b) {
+bool cmpPlate (Plate& a, Plate& b) {
     return a.abs_area > b.abs_area;
-}
-void ModelNesting::sortPlates(std::vector<Plate>& plates) {
-    for (int i = 0; i < plates.size(); i++) {
-        plates[i].id = i;
-    }
-
-    std::sort(plates.begin(), plates.end(), cmp);
 }
 
 void ModelNesting::startNFP() {
-    for (Part part : parts) {
+    log("start NFP\n");
+    for (Part& part : parts) {
         if (part.in_place) {
             continue;
         }
-
-        sortPlates(plates);
-
-        for (Plate plate : plates) {
+        std::sort(plates.begin(), plates.end(), cmpPlate);
+        for (Plate& plate : plates) {
             if (plate.abs_area < part.abs_area) {
                 continue;
             }
@@ -685,34 +778,108 @@ void ModelNesting::startNFP() {
             Part result_part;
             if (partPlacement(plate, part, result_part)) {
                 part = result_part;
-                break ;
+                break;
             }
         }
         result_parts.emplace_back(part);
     }
 
     for (Part part : result_parts) {
-        if (part.is_rotated) {
-            roundAndMulPolygons(part.polygon, 1 / accuracy);
-            roundAndMulPoint(part.center, 1 / accuracy);
-            roundAndMulPoint(part.position, 1 / accuracy);
-            part.area /= accuracy;
-            part.abs_area /= accuracy;
+        if (part.rotate_polygon.is_unbounded()) {
+            continue;
         }
+        roundAndMulPolygons(part.polygon, 1 / accuracy);
+        part.center = roundAndMulPoint(part.center, 1 / accuracy);
+        part.position = roundAndMulPoint(part.position, 1 / accuracy);
+        part.area /= accuracy;
+        part.abs_area /= accuracy;
+    }
+    log("end NFP\n");
+}
+
+void test() {
+    //    offsetPolygon(plates[0].polygon, (FT)1);
+    //    offsetPolygon(parts[0].polygon, -1);
+    Polygon_2 poly;
+
+    poly.push_back(Point_2(100,100));
+    poly.push_back(Point_2(0,100));
+    poly.push_back(Point_2(0,22));
+    poly.push_back(Point_2(0, 0));
+    poly.push_back(Point_2(41, 0));
+    poly.push_back(Point_2(100, 0));
+    Polygon_2 poly2;
+
+    poly2.push_back(Point_2(12,40));
+    poly2.push_back(Point_2(24,61));
+    poly2.push_back(Point_2(63, 39));
+    poly2.push_back(Point_2(41,0));
+    poly2.push_back(Point_2(20,12));
+    poly2.push_back(Point_2(24,20));
+    poly2.push_back(Point_2(0,22));
+    poly2.push_back(Point_2(20,35));
+
+    std::vector<Polygon_2> inner;
+    inner.push_back(poly2);
+    Polygon_with_holes_2 pwh(poly, inner.begin(), inner.end());
+    printPolygonWithHoles(pwh);
+
+    std::vector<Pwh_ptr> offset_poly_with_holes_ptr = CGAL::create_interior_skeleton_and_offset_polygons_with_holes_2(10, pwh);
+    typename std::vector<Pwh_ptr>::const_iterator pi = offset_poly_with_holes_ptr.begin();
+    int k = 1;
+    for (; pi != offset_poly_with_holes_ptr.end(); ++pi,++k) {
+        std::cout << "k: " << k << std::endl;
+        printPolygonWithHoles(**pi);
+    }
+}
+
+bool cmpPart(Part& a, Part& b) {
+    return a.abs_area > b.abs_area;
+}
+
+void ModelNesting::initialize(std::vector<Plate>& plate, std::vector<Part>& part) {
+    log("initialize\n");
+    Polygon_with_holes_2 simplify_polygon;
+    for (int i = 0; i < parts.size(); i++) {
+        simplify_polygon = parts[i].polygon;
+        simplifyPolygons(simplify_polygon, limit_edge);
+
+        if (offset > 0) {
+            simplify_polygon = polygonOffset(simplify_polygon, -offset);
+        }
+        roundAndMulPolygons(simplify_polygon, accuracy);
+        parts[i].polygon = simplify_polygon;
+        parts[i].center = roundAndMulPoint(parts[i].center, accuracy);
+        parts[i].in_place = false;
+        parts[i].init();
+    }
+    std::sort(parts.begin(), parts.end(), cmpPart);
+
+    for (int i = 0; i < plates.size(); i++) {
+        plates[i].id = i;
+        simplify_polygon = plates[i].polygon;
+        simplifyPolygons(simplify_polygon, limit_edge);
+        roundAndMulPolygons(simplify_polygon, accuracy);
+        plates[i].polygon = simplify_polygon;
+        plates[i].init();
     }
 }
 
 void ModelNesting::modelNesting(std::string input_file, std::string output_file, DataGroup& data_group) {
-    // get data_group
-    log("read file\n");
-    readFile(input_file);
-
-    log("start nfp\n");
-    startNFP();
-//    offsetPolygon(plates[0].polygon, (FT)1);
-//    offsetPolygon(parts[0].polygon, -1);
-
-    //    writeFile(output_file);
+//    // get data_group
+//    if (!readFile(input_file)) {
+//        logError("Invalid Input File.\n");
+//        exit(2);
+//    }
+//    initialize(plates, parts);
+//
+//    startNFP();
+//
+//    if (!writeFile(output_file)) {
+//        logError("Invalid Output File.\n");
+//        exit(2);
+//    }
+    test();
 }
 
 }

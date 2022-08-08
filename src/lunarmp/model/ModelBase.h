@@ -1,6 +1,7 @@
 //
 // Created by Cyril on 2022/4/8.
 //
+#pragma once
 
 #ifndef LUNARMP_MODELBASE_H
 #define LUNARMP_MODELBASE_H
