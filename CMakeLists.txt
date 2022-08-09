@@ -28,6 +28,8 @@ set(PROJECT_SRCS
         src/lunarmp/utils/logoutput.cpp
         src/lunarmp/utils/SMProgress.cpp
         src/lunarmp/utils/TimeKeeper.cpp
+
+        src/clipper/clipper.cpp
         )
 
 add_library(_LunarMP STATIC ${PROJECT_SRCS})
@@ -54,6 +56,7 @@ find_package(Boost REQUIRED)
 target_link_libraries(_LunarMP PUBLIC CGAL::CGAL)
 
 target_include_directories(_LunarMP PUBLIC src/rapidjson)
+target_include_directories(_LunarMP PUBLIC src/clipper)
 
 add_executable(LunarMP src/lunarmp/main.cpp)
 
