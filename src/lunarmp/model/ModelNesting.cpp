@@ -251,8 +251,10 @@ bool ModelNesting::writeFile(std::string output_file) {
 
 void ModelNesting::getRotatePolygons(Polygon_with_holes_2& rotate_polygon, int i, Point_2& rotateCenter, Point_2& center) {
     rotatePolygons(rotate_polygon, i, center);
-    roundAndMulPolygons(rotate_polygon);
-    Point_2 offset = Point_2(-rotate_polygon.bbox().xmin(), -rotate_polygon.bbox().ymin());
+    rotate_polygon = roundAndMulPolygons(rotate_polygon);
+
+    Point_2 tmp = getBBoxMinn(rotate_polygon.outer_boundary());
+    Point_2 offset = Point_2(-tmp.x(), -tmp.y());
     movePolygons(rotate_polygon, offset);
     rotateCenter = add(center, offset);
 }
@@ -631,18 +633,18 @@ void ModelNesting::generateNFP(Plate& plate, Part& part, Part& result_part) {
     log("generateNFP.\n");
 
     for (int i = 0; i < 360; i += rotate) {
-        std::cout << "step: " << i << std::endl;
+//        std::cout << "step: " << i << std::endl;
         Polygon_with_holes_2 rotated_poly = part.polygon;
         Point_2 rotated_center;
         getRotatePolygons(rotated_poly, i, rotated_center, part.center);
-
+//        std::cout << "rotate: " << rotated_center << " center" << part.center << std::endl;
         std::vector<Segment_2> trace_lines;
         generateTraceLine(plate.polygon.outer_boundary(), rotated_poly.outer_boundary(), rotated_center, trace_lines);
         std::vector<std::vector<Segment_2>> nfp_rings;
         mergeTraceLines2Polygon(plate.polygon.outer_boundary(), rotated_center, trace_lines, nfp_rings);
 
         if (nfp_rings.empty()) {
-            log("%d, nfp ring is none!\n");
+            log("%d, nfp ring is none!\n", i);
             continue;
         }
 
@@ -690,26 +692,22 @@ void ModelNesting::generateNFP(Plate& plate, Part& part, Part& result_part) {
 
 
 void ModelNesting::updateCurrentPlate(Plate& plate, Polygon_with_holes_2& diff_plate_polygons) {
-    log("--------updateCurrentPlate\n");
-    coutPwh(diff_plate_polygons);
+//    log("--------updateCurrentPlate\n");
+//    coutPwh(diff_plate_polygons);
+
     Polygon_with_holes_2 offset_poly = polygonOffset(diff_plate_polygons, -plate_offset);
-    log("11111111111111111111\n");
-    std::cout << "offset_poly\n";
-    coutPwh(offset_poly);
+//    std::cout << "offset_poly\n";
+//    coutPwh(offset_poly);
 
     Polygon_with_holes_2 offset_polys = polygonOffset(offset_poly, plate_offset);
-    log("222222222222222222\n");
-    std::cout << "offset_polys\n";
-    coutPwh(offset_polys);
+//    std::cout << "offset_polys\n";
+//    coutPwh(offset_polys);
 
     Polygon_2 outer_poly = offset_polys.outer_boundary();
-    log("333333333333\n");
 
     roundAndMulPolygon(outer_poly);
-    log("44444444444444\n");
 
-    Polygon_with_holes_2 union_poly = polygonIntersection(diff_plate_polygons, outer_poly);
-    log("5555555555555555\n");
+    Polygon_with_holes_2 union_poly = polygonsIntersection(diff_plate_polygons, outer_poly);
 
     if (union_poly.is_unbounded()) {
         plate.abs_area = 0;
@@ -774,7 +772,7 @@ void ModelNesting::startNFP() {
             if (plate.abs_area < part.abs_area) {
                 continue;
             }
-
+//            coutPwh(plate.polygon);
             Part result_part;
             if (partPlacement(plate, part, result_part)) {
                 part = result_part;
@@ -788,7 +786,7 @@ void ModelNesting::startNFP() {
         if (part.rotate_polygon.is_unbounded()) {
             continue;
         }
-        roundAndMulPolygons(part.polygon, 1 / accuracy);
+        part.polygon = roundAndMulPolygons(part.polygon, 1 / accuracy);
         part.center = roundAndMulPoint(part.center, 1 / accuracy);
         part.position = roundAndMulPoint(part.position, 1 / accuracy);
         part.area /= accuracy;
@@ -804,33 +802,27 @@ void test() {
 
     poly.push_back(Point_2(100,100));
     poly.push_back(Point_2(0,100));
-    poly.push_back(Point_2(0,22));
+    poly.push_back(Point_2(0,20));
     poly.push_back(Point_2(0, 0));
-    poly.push_back(Point_2(41, 0));
+    poly.push_back(Point_2(35, 0));
     poly.push_back(Point_2(100, 0));
     Polygon_2 poly2;
 
-    poly2.push_back(Point_2(12,40));
-    poly2.push_back(Point_2(24,61));
-    poly2.push_back(Point_2(63, 39));
-    poly2.push_back(Point_2(41,0));
-    poly2.push_back(Point_2(20,12));
-    poly2.push_back(Point_2(24,20));
-    poly2.push_back(Point_2(0,22));
-    poly2.push_back(Point_2(20,35));
+    poly2.push_back(Point_2(10,37));
+    poly2.push_back(Point_2(20,55));
+    poly2.push_back(Point_2(55,35));
+    poly2.push_back(Point_2(35,0));
+    poly2.push_back(Point_2(17,10));
+    poly2.push_back(Point_2(22,19));
+    poly2.push_back(Point_2(0,20));
+    poly2.push_back(Point_2(19,32));
 
-    std::vector<Polygon_2> inner;
-    inner.push_back(poly2);
-    Polygon_with_holes_2 pwh(poly, inner.begin(), inner.end());
-    printPolygonWithHoles(pwh);
+    Polygon_with_holes_2 pwh(poly);
+    pwh.add_hole(poly2);
+//    coutPwh(pwh);
+//    offsetPolygon(pwh, 10);
+//    offsetPolygon(pwh, -10);
 
-    std::vector<Pwh_ptr> offset_poly_with_holes_ptr = CGAL::create_interior_skeleton_and_offset_polygons_with_holes_2(10, pwh);
-    typename std::vector<Pwh_ptr>::const_iterator pi = offset_poly_with_holes_ptr.begin();
-    int k = 1;
-    for (; pi != offset_poly_with_holes_ptr.end(); ++pi,++k) {
-        std::cout << "k: " << k << std::endl;
-        printPolygonWithHoles(**pi);
-    }
 }
 
 bool cmpPart(Part& a, Part& b) {
@@ -845,10 +837,9 @@ void ModelNesting::initialize(std::vector<Plate>& plate, std::vector<Part>& part
         simplifyPolygons(simplify_polygon, limit_edge);
 
         if (offset > 0) {
-            simplify_polygon = polygonOffset(simplify_polygon, -offset);
+            simplify_polygon = polygonOffset(simplify_polygon, offset);
         }
-        roundAndMulPolygons(simplify_polygon, accuracy);
-        parts[i].polygon = simplify_polygon;
+        parts[i].polygon = roundAndMulPolygons(simplify_polygon, accuracy);
         parts[i].center = roundAndMulPoint(parts[i].center, accuracy);
         parts[i].in_place = false;
         parts[i].init();
@@ -859,27 +850,26 @@ void ModelNesting::initialize(std::vector<Plate>& plate, std::vector<Part>& part
         plates[i].id = i;
         simplify_polygon = plates[i].polygon;
         simplifyPolygons(simplify_polygon, limit_edge);
-        roundAndMulPolygons(simplify_polygon, accuracy);
-        plates[i].polygon = simplify_polygon;
+        plates[i].polygon = roundAndMulPolygons(simplify_polygon, accuracy);
         plates[i].init();
     }
 }
 
 void ModelNesting::modelNesting(std::string input_file, std::string output_file, DataGroup& data_group) {
-//    // get data_group
-//    if (!readFile(input_file)) {
-//        logError("Invalid Input File.\n");
-//        exit(2);
-//    }
-//    initialize(plates, parts);
-//
-//    startNFP();
-//
-//    if (!writeFile(output_file)) {
-//        logError("Invalid Output File.\n");
-//        exit(2);
-//    }
-    test();
+//     get data_group
+    if (!readFile(input_file)) {
+        logError("Invalid Input File.\n");
+        exit(2);
+    }
+    initialize(plates, parts);
+
+    startNFP();
+
+    if (!writeFile(output_file)) {
+        logError("Invalid Output File.\n");
+        exit(2);
+    }
+//test();
 }
 
 }

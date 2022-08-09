@@ -72,12 +72,17 @@ double approximate(double a, int bit = 0) {
     if (bit == 2) {
         return round(a * 1e2) * 1e-2;
     }
-
-    return round(a * 1e6) * 1e-6;
+    if (bit == 4) {
+        return round(a * 1e4) * 1e-4;
+    }
+    if (bit == 6) {
+        return round(a * 1e6) * 1e-6;
+    }
+    return a;
 }
 
 bool isEqual(double a, double b) {
-    if (approximate(a - b) == 0) {
+    if (approximate(a - b, 6) == 0) {
         return true;
     }
     return false;
@@ -89,73 +94,57 @@ bool isEqualPoint(Point_2 a, Point_2 b) {
 
 bool getDirection(Point_2 a, Point_2 b) {
     if (isEqual(a.x(), b.x())) {
-        return approximate(a.y() - b.y()) < 0;
+        return approximate(a.y() - b.y(), 6) < 0;
     }
     else {
-        return approximate(a.x() - b.x()) < 0;
+        return approximate(a.x() - b.x(), 6) < 0;
     }
-}
-
-void getPointSum(Polygon_2& poly, double& x, double& y) {
-    int i = 0;
-    for (Polygon_2::Vertex_const_iterator vit = poly.vertices_begin(); vit != poly.vertices_end(); ++vit, ++i) {
-        x += (*vit).x();
-        y += (*vit).y();
-    }
-    x == 0 ? 0 : x /= (double) i;
-    y == 0 ? 0 : y /= (double) i;
 }
 
 Point_2 getCenter(Polygon_with_holes_2& pwh) {
     double x = 0.0;
     double y = 0.0;
-    getPointSum(pwh.outer_boundary(), x, y);
-    if (pwh.number_of_holes() > 0) {
-        for (Polygon_2 h : pwh.holes()) {
-            getPointSum(h, x, y);
-        }
+    std::vector<Point_2> tmp = getVertices(pwh.outer_boundary());
+    for (Point_2 p : tmp) {
+        x += p.x();
+        y += p.y();
     }
-    return Point_2(approximate(x, 0), approximate(y, 0));
+    int L = tmp.size();
+    std::cout << x/L << " " << y/L <<std::endl;
+    return Point_2(x/L, y/L);
 }
 
 Point_2 roundAndMulPoint(Point_2& point, double limit = 1) {
     return Point_2(approximate(point.x() * limit), approximate(point.y() * limit));
 }
 
-void roundAndMulPolygon(Polygon_2& polygon, double limit = 1) {
+Polygon_2 roundAndMulPolygon(Polygon_2& polygon, double limit = 1) {
     std::vector<Point_2> tmp = getVertices(polygon);
     Polygon_2 res;
-    for (VertexIterator vi = polygon.vertices_begin(); vi != polygon.vertices_end(); ++vi) {
-        res.push_back(roundAndMulPoint(*vi, limit));
+    for (Point_2& p : tmp) {
+        res.push_back(roundAndMulPoint(p, limit));
     }
-    polygon = res;
+    return res;
 }
 
-void roundAndMulPolygons(Polygon_with_holes_2& polygon, double limit = 1) {
-//    Polygon_2 outer;
-//    for (Point_2 point : polygon.outer_boundary()) {
-//        outer.push_back(roundAndMulPoint(point, limit));
-//    }
-    roundAndMulPolygon(polygon.outer_boundary());
+Polygon_with_holes_2 roundAndMulPolygons(Polygon_with_holes_2& polygon, double limit = 1) {
+    Polygon_with_holes_2 res(roundAndMulPolygon(polygon.outer_boundary()));
     if (polygon.number_of_holes() > 0) {
         std::vector<Polygon_2> holes;
         for (Polygon_2& hole : polygon.holes()) {
 //            holes.emplace_back(roundAndMulPolygon(hole, limit));
-            roundAndMulPolygon(hole);
+            res.add_hole(roundAndMulPolygon(hole));
         }
-//        polygon = Polygon_with_holes_2(outer, holes.begin(), holes.end());
-//    }
-//    else {
-//        polygon = Polygon_with_holes_2(outer);
     }
+    return res;
 }
 
 double angleToPi(double angle) {
-    return approximate(angle / 180 * CGAL_PI, 2);
+    return approximate(angle / 180 * CGAL_PI, 4);
 }
 
 double piToAngle(double pi) {
-    return approximate(pi / CGAL_PI * 180, 2);
+    return approximate(pi / CGAL_PI * 180, 4);
 }
 
 int angle(Vector_2 v) {
@@ -168,9 +157,10 @@ int angle(Vector_2 v) {
 
 Point_2 rotate(Point_2 p, int angle, Point_2 center = Point_2(0.0, 0.0)) {
     double pi = angleToPi((double)angle);
-    FT x = (p.x() - center.x()) * cos(pi) - (p.y() - center.y()) * sin(pi) + center.x();
-    FT y = (p.x() - center.x()) * sin(pi) + (p.y() - center.y()) * cos(pi) + center.y();
-    return Point_2(approximate(x), approximate(y));
+    double x = (p.x() - center.x()) * cos(pi) - (p.y() - center.y()) * sin(pi) + center.x();
+    double y = (p.x() - center.x()) * sin(pi) + (p.y() - center.y()) * cos(pi) + center.y();
+
+    return Point_2(approximate(x, 6), approximate(y, 6));
 }
 
 Polygon_2 rotatePolygon(Polygon_2 polygon, int i, Point_2 center = Point_2(0.0, 0.0)) {
@@ -194,6 +184,17 @@ void rotatePolygons(Polygon_with_holes_2& polygon, int i, Point_2 center) {
     else {
         polygon = Polygon_with_holes_2(outer);
     }
+}
+
+Point_2 getBBoxMinn(Polygon_2 polygon) {
+    std::vector<Point_2> tmp = getVertices(polygon);
+    double x = polygon[0].x();
+    double y = polygon[0].y();
+    for (int i = 1; i < polygon.size(); i++) {
+        x = std::min(x, polygon[i].x());
+        y = std::min(y, polygon[i].y());
+    }
+    return Point_2(x, y);
 }
 
 Point_2 add(Point_2 a, Point_2 b) {
@@ -330,23 +331,16 @@ void coutLines(std::vector<Segment_2> tLines) {
 
 void coutPoly(Polygon_2 p) {
     std::cout << "[";
-    Polygon_2::Vertex_const_iterator vit;
-    int i = 0;
-    for (vit = p.vertices_begin(); vit != p.vertices_end(); ++vit, ++i) {
-        if (i == 0) {
-            std::cout << (*vit).x() << "," << (*vit).y();
-        }
-        else {
-            std::cout << "," << (*vit).x() << "," << (*vit).y();
-        }
+    std::vector<Point_2> tmp = getVertices(p);
+    for (int i = 0 ; i < tmp.size(); i++) {
+        std::cout << tmp[i].x() << "," << tmp[i].y() << ",";
     }
-    std::cout << "]";
+    std::cout << tmp[0].x() << "," << tmp[0].y() << "]";
 }
 
 void coutPwh(Polygon_with_holes_2& pwh) {
     std::cout << "[";
     if (! pwh.is_unbounded()) {
-//        std::cout << "{ Outer boundary = ";
         coutPoly(pwh.outer_boundary());
     }
     else {

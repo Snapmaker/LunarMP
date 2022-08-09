@@ -6,11 +6,13 @@
 #ifndef LUNARMP_SRC_LUNARMP_POLYGON_POLYGONBOOL_H_
 #define LUNARMP_SRC_LUNARMP_POLYGON_POLYGONBOOL_H_
 
-#include <CGAL/create_offset_polygons_from_polygon_with_holes_2.h>
 #include <CGAL/Boolean_set_operations_2.h>
 
 #include "PolygonBase.h"
-typedef boost::shared_ptr<Polygon_2>                                         P_ptr;
+
+#include "../clipper/clipper.hpp"
+
+//typedef boost::shared_ptr<Polygon_2>                                         P_ptr;
 typedef boost::shared_ptr<Polygon_with_holes_2>                             Pwh_ptr;
 
 namespace lunarmp {
@@ -25,14 +27,6 @@ std::vector<Polygon_with_holes_2> polygonDifference(Polygon_2 sub, Polygon_2& cl
         std::make_move_iterator(std::end(pwhs))
     };
     return res;
-}
-
-template <class Type1, class Type2>
-Polygon_with_holes_2 polygonIntersection(Type1& sub, Type2& clip) {
-    std::list<Polygon_with_holes_2> pwhs;
-    CGAL::intersection (sub, clip, std::back_inserter(pwhs));
-
-    return pwhs.front();
 }
 
 
@@ -66,17 +60,96 @@ void printPolygonWithHoles1(const Polygon_with_holes_2& pwh) {
     return;
 }
 
-template <class Type>
-Polygon_with_holes_2 polygonOffset(Type& poly, double offset) {
-    std::vector<Pwh_ptr> offset_poly_with_holes_ptr = CGAL::create_interior_skeleton_and_offset_polygons_with_holes_2(offset, poly);
-    if (offset_poly_with_holes_ptr.size() == 0) {
+void polygonToPoints(Polygon_2& polygon, ClipperLib::Path & path) {
+    for (VertexIterator vi = polygon.vertices_begin(); vi != polygon.vertices_end(); ++vi) {
+//        path.emplace_back(round((*vi).x()), round((*vi).y()));
+        path.emplace_back(round((*vi).x()*1e6), round((*vi).y()*1e6));
+    }
+    path.emplace_back(path[0]);
+}
+
+void pwhToPoints(Polygon_with_holes_2& pwh, ClipperLib::Paths& paths) {
+    if (pwh.is_unbounded()) {
+        log("pwhToPoints: Unbounded pwh\n");
+        return;
+    }
+
+    ClipperLib::Path poly;
+    polygonToPoints(pwh.outer_boundary(), poly);
+    paths.emplace_back(poly);
+    if (pwh.number_of_holes() > 0) {
+        for (Polygon_2 hole : pwh.holes()) {
+            ClipperLib::Path poly_h;
+            polygonToPoints(hole, poly_h);
+            paths.emplace_back(poly_h);
+        }
+    }
+//
+//    for(int i = 0; i < paths.size(); i++) {
+//        ClipperLib::Path poly1 = paths[i];
+//        for (int j = 0; j < poly1.size(); j++) {
+//            std::cout << poly1[j].X << " " << poly1[j].Y << std::endl;
+//        }
+//    }
+}
+
+Polygon_with_holes_2 pointTpPwh(ClipperLib::Paths paths) {
+    Polygon_2 outer;
+    for (int i = 0; i < paths[0].size(); i++) {
+//        outer.push_back(Point_2(paths[0][i].X, paths[0][i].Y));
+        outer.push_back(Point_2(paths[0][i].X*1e-6, paths[0][i].Y*1e-6));
+    }
+
+    Polygon_with_holes_2 res(outer);
+    if (paths.size() > 1) {
+        for (int i = 1; i < paths.size(); i++) {
+            ClipperLib::Path path = paths[i];
+            Polygon_2 hole;
+            for (int j = 0; j < path.size(); j++) {
+                hole.push_back(Point_2(path[j].X*1e-6, path[j].Y*1e-6));
+            }
+            res.add_hole(hole);
+        }
+    }
+//    coutPwh(res);
+    return res;
+}
+
+Polygon_with_holes_2 polygonOffset(Polygon_with_holes_2& pwh, int distance, ClipperLib::JoinType join_type = ClipperLib::jtMiter, double miter_limit = 3) {
+    ClipperLib::Paths paths;
+    pwhToPoints(pwh, paths);
+
+    if (distance == 0) {
+        return pwh;
+    }
+
+    ClipperLib::Paths ret;
+    ClipperLib::ClipperOffset clipper(miter_limit*1e6, 0.25*1e6);
+    clipper.AddPaths(paths, join_type,
+                     ClipperLib::etClosedPolygon);
+    clipper.MiterLimit = miter_limit;
+    clipper.Execute(ret, distance*1e6);
+
+    return pointTpPwh(ret);
+}
+
+Polygon_with_holes_2 polygonsIntersection(Polygon_with_holes_2& sub ,Polygon_2& clip) {
+    if (sub.is_unbounded() || clip.is_empty()) {
         return Polygon_with_holes_2();
     }
-    typename std::vector<Pwh_ptr>::const_iterator pi = offset_poly_with_holes_ptr.begin();
-//    for (; pi < offset_poly_with_holes_ptr.end(); ++pi) {
-//        printPolygonWithHoles1(**pi);
-//    }
-    return (**pi);
+    ClipperLib::Paths ret;
+    ClipperLib::Paths sub_paths;
+    pwhToPoints(sub, sub_paths);
+
+    ClipperLib::Path clip_path;
+    polygonToPoints(clip, clip_path);
+
+    ClipperLib::Clipper clipper(0);
+    clipper.AddPaths(sub_paths, ClipperLib::ptSubject, true);
+    clipper.AddPath(clip_path, ClipperLib::ptClip, true);
+    clipper.Execute(ClipperLib::ctIntersection, ret);
+
+    return pointTpPwh(ret);
 }
 
 }
