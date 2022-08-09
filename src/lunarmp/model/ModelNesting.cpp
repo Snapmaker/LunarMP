@@ -130,7 +130,6 @@ bool ModelNesting::readFile(std::string input_file) {
                     else {
                         part.center = getCenter(part.polygon);
                     }
-
                     parts.emplace_back(part);
                 }
 
@@ -596,13 +595,13 @@ void ModelNesting::traverTraceLines(std::vector<Segment_2>& trace_lines, std::ve
 }
 
 void ModelNesting::mergeTraceLines2Polygon(Polygon_2& plate, Point_2& center, std::vector<Segment_2>& trace_lines, std::vector<std::vector<Segment_2>>& nfp_rings) {
-    log(" - processCollinear.\n");
+//    log(" - processCollinear.\n");
     processCollinear(trace_lines);
 
-    log(" - deleteOutTraceLine.\n");
+//    log(" - deleteOutTraceLine.\n");
     deleteOutTraceLine(trace_lines, plate, center);
 
-    log(" - find nfps.\n");
+//    log(" - find nfps.\n");
     std::vector<Segment_2> new_trace_lines;
     while(true) {
         traverTraceLines(trace_lines, new_trace_lines);
@@ -719,7 +718,7 @@ void ModelNesting::updateCurrentPlate(Plate& plate, Polygon_with_holes_2& diff_p
         plate.polygon = union_poly;
         plate.init();
     }
-    log("--------updateCurrentPlate End\n");
+//    log("--------updateCurrentPlate End\n");
 
 }
 
@@ -736,7 +735,6 @@ bool ModelNesting::partPlacement(Plate& plate, Part& part, Part& result_part) {
     }
 
     result_part.position = roundAndMulPoint(result_part.position);
-
     movePolygons(result_part.rotate_polygon, sub(result_part.position, result_part.center));
 
     std::vector<Polygon_with_holes_2> diff_plate_polygons = polygonDifference(plate.polygon.outer_boundary(), result_part.rotate_polygon.outer_boundary());
@@ -745,6 +743,7 @@ bool ModelNesting::partPlacement(Plate& plate, Part& part, Part& result_part) {
         std::sort(diff_plate_polygons.begin(), diff_plate_polygons.end(), cmpPwhs);
     }
     part.in_place = true;
+    result_part.id = part.id;
 
     updateCurrentPlate(plate, diff_plate_polygons[0]);
 
@@ -772,7 +771,6 @@ void ModelNesting::startNFP() {
             if (plate.abs_area < part.abs_area) {
                 continue;
             }
-//            coutPwh(plate.polygon);
             Part result_part;
             if (partPlacement(plate, part, result_part)) {
                 part = result_part;
