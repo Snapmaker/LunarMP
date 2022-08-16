@@ -11,6 +11,7 @@
 
 #include <CGAL/Kernel/global_functions.h>
 #include <CGAL/intersection_2.h>
+#include <CGAL/convex_hull_2.h>
 
 #include <cmath>
 

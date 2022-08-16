@@ -11,12 +11,36 @@
 
 namespace lunarmp {
 
-std::vector<Point_2> getVertices(Polygon_2 p) {
+std::vector<Point_2> polygonToVertices(Polygon_2& p) {
     std::vector<Point_2> res;
     for (Polygon_2::Vertex_const_iterator vit = p.vertices_begin(); vit != p.vertices_end(); ++vit) {
         res.emplace_back(*vit);
     }
     return res;
+}
+
+std::vector<Point_2> pwhToVertices(Polygon_with_holes_2& pwh) {
+    if (pwh.is_unbounded()) {
+        return std::vector<Point_2>();
+    }
+    std::vector<Point_2> res = polygonToVertices(pwh.outer_boundary());
+    std::vector<Point_2> tmp;
+    if (pwh.number_of_holes() > 0) {
+        for (Polygon_2 p : pwh.holes()) {
+            tmp = polygonToVertices(p);
+            res.insert(res.end(), tmp.begin(), tmp.end());
+            tmp.clear();
+        }
+    }
+    return res;
+}
+
+Polygon_with_holes_2 verticesToPwh(std::vector<Point_2>& points) {
+    Polygon_2 outer;
+    for (Point_2 point : points) {
+        outer.push_back(point);
+    }
+    return Polygon_with_holes_2(outer);
 }
 
 void printPoints(std::vector<Point_2> P) {
@@ -104,13 +128,12 @@ bool getDirection(Point_2 a, Point_2 b) {
 Point_2 getCenter(Polygon_with_holes_2& pwh) {
     double x = 0.0;
     double y = 0.0;
-    std::vector<Point_2> tmp = getVertices(pwh.outer_boundary());
+    std::vector<Point_2> tmp = polygonToVertices(pwh.outer_boundary());
     for (Point_2 p : tmp) {
         x += p.x();
         y += p.y();
     }
     int L = tmp.size();
-    std::cout << x/L << " " << y/L <<std::endl;
     return Point_2(x/L, y/L);
 }
 
@@ -119,7 +142,7 @@ Point_2 roundAndMulPoint(Point_2& point, double limit = 1) {
 }
 
 Polygon_2 roundAndMulPolygon(Polygon_2& polygon, double limit = 1) {
-    std::vector<Point_2> tmp = getVertices(polygon);
+    std::vector<Point_2> tmp = polygonToVertices(polygon);
     Polygon_2 res;
     for (Point_2& p : tmp) {
         res.push_back(roundAndMulPoint(p, limit));
@@ -187,7 +210,7 @@ void rotatePolygons(Polygon_with_holes_2& polygon, int i, Point_2 center) {
 }
 
 Point_2 getBBoxMinn(Polygon_2 polygon) {
-    std::vector<Point_2> tmp = getVertices(polygon);
+    std::vector<Point_2> tmp = polygonToVertices(polygon);
     double x = polygon[0].x();
     double y = polygon[0].y();
     for (int i = 1; i < polygon.size(); i++) {
@@ -262,7 +285,7 @@ std::vector<Point_2> compressLine(std::vector<Point_2>& polygon, int start, int 
 }
 
 void simplifyPolygon(Polygon_2& poly, int limit_edge) {
-    std::vector<Point_2> tmp = getVertices(poly);
+    std::vector<Point_2> tmp = polygonToVertices(poly);
     std::vector<Point_2> points = compressLine(tmp, 0, poly.size()-1, limit_edge);
     poly = Polygon_2(points.begin(), points.end());
 }
@@ -331,7 +354,7 @@ void coutLines(std::vector<Segment_2> tLines) {
 
 void coutPoly(Polygon_2 p) {
     std::cout << "[";
-    std::vector<Point_2> tmp = getVertices(p);
+    std::vector<Point_2> tmp = polygonToVertices(p);
     for (int i = 0 ; i < tmp.size(); i++) {
         std::cout << tmp[i].x() << "," << tmp[i].y() << ",";
     }
@@ -349,6 +372,31 @@ void coutPwh(Polygon_with_holes_2& pwh) {
     for (Polygon_2 hit : pwh.holes()) {
         std::cout << ",";
         coutPoly(hit);
+    }
+    std::cout << "]" << std::endl;
+    return;
+}
+
+void coutPoly1(Polygon_2 p) {
+    std::cout << "[";
+    std::vector<Point_2> tmp = polygonToVertices(p);
+    for (int i = 0 ; i < tmp.size(); i++) {
+        std::cout << "{x:" << tmp[i].x() << ",y:" << tmp[i].y() << "},";
+    }
+    std::cout<< "{x:"  << tmp[0].x() << ",y:" << tmp[0].y() << "}]";
+}
+
+void coutPwh1(Polygon_with_holes_2& pwh) {
+    std::cout << "[";
+    if (! pwh.is_unbounded()) {
+        coutPoly1(pwh.outer_boundary());
+    }
+    else {
+        std::cout << "{ Unbounded polygon." << std::endl;
+    }
+    for (Polygon_2 hit : pwh.holes()) {
+        std::cout << ",";
+        coutPoly1(hit);
     }
     std::cout << "]" << std::endl;
     return;

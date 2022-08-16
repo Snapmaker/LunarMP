@@ -9,16 +9,16 @@
 #include "../../rapidjson/rapidjson/filewritestream.h"
 #include "../../rapidjson/rapidjson/document.h"
 #include "../../rapidjson/rapidjson/prettywriter.h"
-//#include "../../rapidjson/rapidjson/writer.h"
 #include "../utils/logoutput.h"
 #include "../data/DataGroup.h"
 #include "../polygon/PolygonBase.h"
 
-#include <string>
-#include <vector>
 #include <fstream>
 #include <iostream>
+#include <string>
+#include <vector>
 #include <list>
+#include <map>
 
 namespace lunarmp {
 
@@ -41,44 +41,34 @@ class Plate {
     int id;
 
     Plate() {};
-    Plate(Polygon_2 poly) : polygon(poly){};
-
-    void init() {
+    Plate(Polygon_2 poly) : polygon(Polygon_with_holes_2(poly)) {};
+    void updateArea() {
         area = polygon.outer_boundary().area();
         abs_area = std::fabs(area);
-
-//        std::cout << "area: " << area << std::endl;
-//        std::cout << "abs area: " << abs_area << std::endl;
     }
     void printPlate();
 };
 
 class Part {
   public:
-    Part() {};
-    Part(Point_2 p, Point_2 c, Polygon_with_holes_2 poly) : position(p), center(c), rotate_polygon(poly) {};
+    Part(){};
+    Part(Point_2 p, Point_2 c, int id, int g, Polygon_with_holes_2 poly) : position(p), center(c), id(id), is_group(g), polygon(poly) {};
 
-    ~Part() {};
+    ~Part(){};
 
     Polygon_with_holes_2 polygon;
-    Polygon_with_holes_2 rotate_polygon;
     Point_2 position = Point_2(-1, -1);
     Point_2 center = Point_2(-1, -1);
     double area = 0;
     double abs_area = 0;
     bool in_place = false;
     int id = -1;
-    bool is_group = false;
+    int is_group = -1;
+    int rotation_degree = 0;
 
-    void init() {
-        area = polygon.outer_boundary().area();
-        abs_area = std::fabs(area);
-//        std::cout << "area: " << area << std::endl;
-//        std::cout << "abs area: " << abs_area << std::endl;
-    }
     void printPart();
-    void updateArea() {
-        area = rotate_polygon.outer_boundary().area();
+    void initializeArea() {
+        area = polygon.outer_boundary().area();
         abs_area = std::fabs(area);
     }
 };
@@ -86,25 +76,24 @@ class Part {
 class PartGroup {
   public:
     PartGroup() {};
-    PartGroup(std::vector<Part> models) : models(models) {};
     ~PartGroup() {};
 
-    int id_group = -1;
     std::vector<Part> models;
+    Part convex_hull;
+    int id = -1;
+    void initialize();
 };
 
 class ModelNesting {
   private:
     double accuracy = 1;
-    double min_part_area = 0;
     int plate_offset = 10;
 
   public:
     std::vector<Part> parts;
-    std::vector<PartGroup> part_groups;
+    std::map<int, PartGroup> part_groups;
     std::vector<Plate> plates;
     std::vector<Part> result_parts;
-    std::vector<PartGroup> result;
     int rotate = 360;
     int offset = 0;
     int limit_edge = 2;
@@ -123,10 +112,6 @@ class ModelNesting {
         }
     }
 
-//    bool sortPolygon(Polygon_2& polygon, bool clock_wise);
-
-//    void updatePolygonPosition(Polygon_with_holes_2& polygon, Point_2& pos);
-
     void polygon2Vectors(Polygon_2& polygon, std::vector<TraceLine>& vectors);
 
     void calculateTraceLines(Polygon_2& anglePolygon, Polygon_2& linesPolygon, std::vector<TraceLine>& trace_lines);
@@ -141,21 +126,13 @@ class ModelNesting {
 
     void traverTraceLines(std::vector<Segment_2>& trace_lines, std::vector<Segment_2>& new_trace_lines);
 
-//    void deleteNoRingSegments(std::vector<Segment_2>& trace_lines);
-
-//    void setMinPoint(Point_2& lowerPoint, Point_2& point);
-
     int searchLowerStartPointIndex(std::vector<Segment_2>& nfpLines);
 
     Point_2 searchLowerPosition(std::vector<Segment_2>& nfp_lines);
 
-//    void standardizedPolygons(std::vector<Polygon_2>& rotate_polygons);
-
     void getRotatePolygons(Polygon_with_holes_2& polygon, int i, Point_2& rotateCenter, Point_2& center);
 
     void generateNFP(Plate& plate, Part& part, Part& result_part);
-
-//    Polygon_2 updateCurrentPolygon(Plate& plate, Polygon_2& poly, Polygon_with_holes_2& pwhs);
 
     void updateCurrentPlate(Plate& plate, Polygon_with_holes_2& pwhs);
 
