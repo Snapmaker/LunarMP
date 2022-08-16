@@ -9,7 +9,7 @@ namespace lunarmp {
 
 void ModelSimplification::writeMesh(std::string output_file, Mesh& mesh) {
     CGAL::IO::write_polygon_mesh(output_file+".stl", mesh, NP::stream_precision(17));
-    CGAL::IO::write_polygon_mesh(output_file+".ply", mesh, NP::stream_precision(17));
+//    CGAL::IO::write_polygon_mesh(output_file+".ply", mesh, NP::stream_precision(17));
 }
 
 bool ModelSimplification::readFile(std::string input_file, Mesh& mesh) {
