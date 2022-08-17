@@ -288,6 +288,7 @@ void ModelRepair::repairModel(std::vector<Point_3>& points, std::vector<std::vec
 
         if (CGAL::is_closed(mesh)) {
             PMP::orient_to_bound_a_volume(mesh, NP::outward_orientation(true));
+            PMP::orient_to_bound_a_volume(mesh, NP::outward_orientation(true));
         }
     } else {
         repairPolygon(points, polygons, mesh);
