@@ -19,7 +19,7 @@ void statusCode(double time, int type) {
 
 void ModelCheck::writeMesh(std::string output_file, Mesh& mesh) {
     CGAL::IO::write_polygon_mesh(output_file+".stl", mesh, NP::stream_precision(17));
-    CGAL::IO::write_polygon_mesh(output_file+".ply", mesh, NP::stream_precision(17));
+//    CGAL::IO::write_polygon_mesh(output_file+".ply", mesh, NP::stream_precision(17));
 }
 
 void ModelCheck::checkConnectedComponents(Mesh mesh) {

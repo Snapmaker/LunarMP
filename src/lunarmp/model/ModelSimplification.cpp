@@ -9,7 +9,8 @@ namespace lunarmp {
 
 void ModelSimplification::writeMesh(std::string output_file, Mesh& mesh) {
     CGAL::IO::write_polygon_mesh(output_file+".stl", mesh, NP::stream_precision(17));
-    CGAL::IO::write_polygon_mesh(output_file+".ply", mesh, NP::stream_precision(17));
+//    CGAL::IO::write_polygon_mesh(output_file+".ply", mesh, NP::stream_precision(17));
+
 }
 
 bool ModelSimplification::readFile(std::string input_file, Mesh& mesh) {
@@ -40,7 +41,7 @@ void ModelSimplification::edgeCollapseGarlandHeckbert(Mesh& mesh, double count_r
     const GH_placement& gh_placement = gh_policies.get_placement();
     Bounded_GH_placement placement(gh_placement);
 
-    log("Collapsing edges of mesh, aiming for %.2lf % of the input edges...\n", count_ratio_threshold);
+    log("Collapsing edges of mesh, aiming for %.2lf of the input edges...\n", count_ratio_threshold);
     remove_edge = SMS::edge_collapse(mesh, stop, NP::get_cost(gh_cost).get_placement(placement));
 
     log("Finished.\n Removed edges: %d, final edges: %d.\n", remove_edge, mesh.number_of_edges());
@@ -58,7 +59,7 @@ void ModelSimplification::edgeCollapseBoundedNormalChange(Mesh& mesh, double edg
     SMS::Count_stop_predicate<Mesh> stop(edge_count_threshold);
     typedef SMS::LindstromTurk_placement<Mesh> Placement;
     SMS::Bounded_normal_change_filter<> filter;
-    SMS::edge_collapse(mesh, stop, NP::get_cost(SMS::LindstromTurk_cost<Mesh>()).filter(filter).get_placement(Placement()));
+    remove_edge = SMS::edge_collapse(mesh, stop, NP::get_cost(SMS::LindstromTurk_cost<Mesh>()).filter(filter).get_placement(Placement()));
 
     std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
     log("Finished.\n Removed edges: %d, final edges: %d.\n", remove_edge, mesh.number_of_edges());
@@ -92,7 +93,8 @@ void ModelSimplification::modelSimplification(std::string input_file, std::strin
         }
         case SimplifyType::EDGE_RATIO_STOP: {
             auto edge_ratio_threshold = data_group.settings.get<double>("edge_ratio_threshold");
-            edgeCollapseGarlandHeckbert(mesh, edge_ratio_threshold);
+//            edgeCollapseGarlandHeckbert(mesh, edge_ratio_threshold);
+            edgeCollapseBoundedNormalChange(mesh, mesh.edges().size() * edge_ratio_threshold);
             simplification_time = t.time();
             break;
         }
