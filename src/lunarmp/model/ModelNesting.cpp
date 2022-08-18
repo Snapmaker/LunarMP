@@ -120,7 +120,6 @@ Part readPart(const rapidjson::Value& itemV) {
     }
 
     part.initializeArea();
-    part.printPart();
     return part;
 }
 
@@ -143,13 +142,13 @@ bool ModelNesting::readFile(std::string input_file) {
         const rapidjson::Value& plateV = doc["plate"];
         if(plateV.HasMember("polygon")) {
             plate.polygon = Polygon_with_holes_2(readPolygon(plateV["polygon"]));
-            movePolygons(plate.polygon, sub(Point_2(0, 0), findLowerPointInPolygon(plate.polygon)));
+            move_vector = sub(Point_2(0, 0), findLowerPointInPolygon(plate.polygon));
+            movePolygons(plate.polygon, move_vector);
             if (plate.polygon.outer_boundary().area() > 0) {
                 reversePolygon(plate.polygon);
             }
             plate.updateArea();
         }
-        plate.printPlate();
         plates.emplace_back(plate);
     }
     else {
@@ -296,7 +295,7 @@ void writePart(rapidjson::Value& part_array, Part& part, rapidjson::Document::Al
     part_array.PushBack(part_obj, allocator);
 }
 
-void writeGroup(rapidjson::Value& part_array, PartGroup& group, Part& part, rapidjson::Document::AllocatorType& allocator, bool is_rotation) {
+void writeGroup(rapidjson::Value& part_array, PartGroup& group, Part& part, rapidjson::Document::AllocatorType& allocator, bool is_rotation, Point_2& move_vector) {
     rapidjson::Value group_obj(rapidjson::kObjectType);
     group_obj.SetObject();
     group_obj.AddMember("id", group.convex_hull.id, allocator);
@@ -312,7 +311,7 @@ void writeGroup(rapidjson::Value& part_array, PartGroup& group, Part& part, rapi
 
     rapidjson::Value parts_obj(rapidjson::kArrayType);
     for (Part& model : group.models) {
-        model.position = add(sub(part.center, part.position), model.center);
+        model.position = add(add(sub(part.center, part.position), model.center), move_vector);
         movePolygons(model.polygon, sub(part.center, part.position));
         writePart(parts_obj, model, allocator, is_rotation);
     }
@@ -328,11 +327,12 @@ void ModelNesting::createJson(rapidjson::Document& doc) {
 
     for (Part part : result_parts) {
         if (part.is_group == -1) {
+            part.position = sub(part.position, move_vector);
             writePart(part_array, part, allocator, is_rotation);
         }
         else {
             PartGroup group = part_groups[part.is_group];
-            writeGroup(part_array, group, part, allocator, is_rotation);
+            writeGroup(part_array, group, part, allocator, is_rotation, move_vector);
         }
     }
 

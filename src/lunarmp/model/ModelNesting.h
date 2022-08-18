@@ -98,6 +98,7 @@ class ModelNesting {
     int offset = 0;
     int limit_edge = 2;
     bool is_rotation = false;
+    Point_2 move_vector;
 
     void initialize(std::vector<Plate>& plate, std::vector<Part>& part);
 
