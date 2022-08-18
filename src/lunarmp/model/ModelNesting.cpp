@@ -29,6 +29,7 @@ void Part::printPart() {
     std::cout << "center: " << center << std::endl;
     std::cout << "Polygon: \n";
     printPolygonWithHoles(polygon);
+    coutPwh(polygon);
 }
 
 void PartGroup::initialize()  {
@@ -69,7 +70,7 @@ Polygon_2 readPolygon(const rapidjson::Value& polyV) {
 Polygon_with_holes_2 readPolygonWithHoles(const rapidjson::Value& polysV) {
     const rapidjson::Value& outerV = polysV[0];
     Polygon_2 outer = readPolygon(outerV);
-    if (polysV.Size() > 1) {
+    if (polysV.Size() >= 2) {
         std::vector<Polygon_2> holes;
         for (int i = 1; i < polysV.Size(); i++) {
             const rapidjson::Value& hols = polysV[i];
@@ -82,23 +83,44 @@ Polygon_with_holes_2 readPolygonWithHoles(const rapidjson::Value& polysV) {
 }
 
 Part readPart(const rapidjson::Value& itemV) {
+    log("readPart\n");
     Part part;
+
+    log("- id\n");
     if (itemV.HasMember("id")) {
         part.id = itemV["id"].GetInt();
     }
+    else {
+        logError("Missing parameter 'id' in json part %d.\n", part.id);
+        exit(2);
+    }
 
+    log("-polygon\n");
     if (itemV.HasMember("polygon_with_holes")) {
+        log("-polygon_with_holes\n");
         const rapidjson::Value& pwhV = itemV["polygon_with_holes"];
         part.polygon = Polygon_with_holes_2(readPolygonWithHoles(pwhV));
     }
+    else if (itemV.HasMember("polygon")) {
+        log("-polygon\n");
+        const rapidjson::Value& pwhV = itemV["polygon"];
+        part.polygon = Polygon_with_holes_2(readPolygon(pwhV));
+        movePolygons(part.polygon, sub(Point_2(0, 0), findLowerPointInPolygon(part.polygon)));
+        if (part.polygon.outer_boundary().area() < 0) {
+            reversePolygon(part.polygon);
+        }
+    }
 
+    log("-center\n");
     if (itemV.HasMember("center")) {
         part.center = Point_2(itemV["center"][0].GetDouble(), itemV["center"][1].GetDouble());
     }
     else {
         part.center = getCenter(part.polygon);
     }
+
     part.initializeArea();
+    part.printPart();
     return part;
 }
 
@@ -121,25 +143,37 @@ bool ModelNesting::readFile(std::string input_file) {
         const rapidjson::Value& plateV = doc["plate"];
         if(plateV.HasMember("polygon")) {
             plate.polygon = Polygon_with_holes_2(readPolygon(plateV["polygon"]));
+            movePolygons(plate.polygon, sub(Point_2(0, 0), findLowerPointInPolygon(plate.polygon)));
+            if (plate.polygon.outer_boundary().area() > 0) {
+                reversePolygon(plate.polygon);
+            }
             plate.updateArea();
         }
+        plate.printPlate();
         plates.emplace_back(plate);
     }
-
+    else {
+        logError("Missing parameter 'plate' in json file.\n");
+        exit(2);
+    }
 
     if (doc.HasMember("rotation")) {
         is_rotation = doc["rotation"].GetBool();
-        rotate = doc["angle"].GetInt();
+        if (!is_rotation) {
+            rotate = 360;
+        }
+        else {
+            if (doc.HasMember("rotation_step_degree")) {
+                rotate = doc["rotation_step_degree"].GetInt();
+            }
+            else {
+                logError("Missing parameter 'rotation_step_degree' in json file.\n");
+                exit(2);
+            }
+        }
     }
     else {
-        logError("File does not exist 'rotation'.\n");
-        exit(2);
-    }
-    if (doc.HasMember("rotation_step_degree")) {
-        rotate = doc["rotation_step_degree"].GetInt();
-    }
-    else {
-        logError("File does not exist 'rotation'.\n");
+        logError("Missing parameter 'rotation' in json file.\n");
         exit(2);
     }
 
@@ -147,7 +181,7 @@ bool ModelNesting::readFile(std::string input_file) {
         offset = doc["distance"].GetInt();
     }
     else {
-        logError("File does not exist 'offset'.\n");
+        logError("Missing parameter 'distance' in json file.\n");
         exit(2);
     }
 
@@ -159,8 +193,12 @@ bool ModelNesting::readFile(std::string input_file) {
                 std::string type = itemV["type"].GetString();
 
                 if (type == "item") {
-                    if (itemV.HasMember("polygon_with_holes")) {
+                    if (itemV.HasMember("polygon_with_holes") || itemV.HasMember("polygon")) {
                         parts.emplace_back(readPart(itemV));
+                    }
+                    else {
+                        logError("Missing parameter 'polygon' in item %d.\n", itemV["id"].GetInt());
+                        exit(2);
                     }
                 }
                 else if (type == "group") {
@@ -174,8 +212,12 @@ bool ModelNesting::readFile(std::string input_file) {
                         if (groupsV.IsArray()) {
                             for (int j = 0; j < groupsV.Size(); j++) {
                                 const rapidjson::Value& groupV = groupsV[j];
-                                if (groupV.HasMember("polygon_with_holes")) {
+                                if (groupV.HasMember("polygon_with_holes") || groupV.HasMember("polygon")) {
                                     group.models.emplace_back(readPart(groupV));
+                                }
+                                else {
+                                    logError("item %d has not 'polygons'!\n", group.convex_hull.id);
+                                    exit(2);
                                 }
                             }
                             group.initialize();
@@ -187,11 +229,15 @@ bool ModelNesting::readFile(std::string input_file) {
                         }
                     }
                 }
+                else {
+                    logError("Missing parameter 'polygon' in group!\n");
+                    exit(2);
+                }
             }
         }
     }
     else {
-        logError("File does not exist 'items'.\n");
+        logError("Missing parameter 'items' in json file.\n");
         exit(2);
     }
     return true;
@@ -223,15 +269,23 @@ void writePolygonWithHoles(rapidjson::Value& polygons, Polygon_with_holes_2 pwh,
     }
 }
 
-void writePart(rapidjson::Value& part_array, Part& part, rapidjson::Document::AllocatorType& allocator) {
+void writePart(rapidjson::Value& part_array, Part& part, rapidjson::Document::AllocatorType& allocator, bool is_rotation) {
     rapidjson::Value part_obj(rapidjson::kObjectType);
     part_obj.SetObject();
     part_obj.AddMember("id", part.id, allocator);
+
     if (part.is_group == -1) {
         part_obj.AddMember("type", "item", allocator);
-        part_obj.AddMember("in_place", part.in_place, allocator);
-        part_obj.AddMember("rotation_degree", part.rotation_degree, allocator);
+        part_obj.AddMember("in_plate", part.in_plate, allocator);
+
+        if (is_rotation == true) {
+            part_obj.AddMember("rotation_degree", part.rotation_degree, allocator);
+        }
+        else {
+            part_obj.AddMember("rotation_degree", 0, allocator);
+        }
     }
+
     part_obj.AddMember("position", writePoint(part.position, allocator), allocator);
     part_obj.AddMember("center", writePoint(part.center, allocator), allocator);
 
@@ -242,20 +296,25 @@ void writePart(rapidjson::Value& part_array, Part& part, rapidjson::Document::Al
     part_array.PushBack(part_obj, allocator);
 }
 
-
-void writeGroup(rapidjson::Value& part_array, PartGroup& group, Part& part, rapidjson::Document::AllocatorType& allocator) {
+void writeGroup(rapidjson::Value& part_array, PartGroup& group, Part& part, rapidjson::Document::AllocatorType& allocator, bool is_rotation) {
     rapidjson::Value group_obj(rapidjson::kObjectType);
     group_obj.SetObject();
     group_obj.AddMember("id", group.convex_hull.id, allocator);
     group_obj.AddMember("type", "group", allocator);
-    group_obj.AddMember("in_place", part.in_place, allocator);
-    group_obj.AddMember("rotation_degree", part.rotation_degree, allocator);
+    group_obj.AddMember("in_plate", part.in_plate, allocator);
+
+    if (is_rotation == true) {
+        group_obj.AddMember("rotation_degree", part.rotation_degree, allocator);
+    }
+    else {
+        group_obj.AddMember("rotation_degree", 0, allocator);
+    }
 
     rapidjson::Value parts_obj(rapidjson::kArrayType);
     for (Part& model : group.models) {
         model.position = add(sub(part.center, part.position), model.center);
         movePolygons(model.polygon, sub(part.center, part.position));
-        writePart(parts_obj, model, allocator);
+        writePart(parts_obj, model, allocator, is_rotation);
     }
     group_obj.AddMember("polygon_group", parts_obj, allocator);
     part_array.PushBack(group_obj, allocator);
@@ -269,11 +328,11 @@ void ModelNesting::createJson(rapidjson::Document& doc) {
 
     for (Part part : result_parts) {
         if (part.is_group == -1) {
-            writePart(part_array, part, allocator);
+            writePart(part_array, part, allocator, is_rotation);
         }
         else {
             PartGroup group = part_groups[part.is_group];
-            writeGroup(part_array, group, part, allocator);
+            writeGroup(part_array, group, part, allocator, is_rotation);
         }
     }
 
@@ -685,13 +744,16 @@ void ModelNesting::generateNFP(Plate& plate, Part& part, Part& result_part) {
     log("generateNFP.\n");
 
     for (int i = 0; i < 360; i += rotate) {
-//        std::cout << "step: " << i << std::endl;
+        // 0. calculate rotated polygon
         Polygon_with_holes_2 rotated_poly = part.polygon;
         Point_2 rotated_center;
         getRotatePolygons(rotated_poly, i, rotated_center, part.center);
-//        std::cout << "rotate: " << rotated_center << " center" << part.center << std::endl;
+
+        // 1. calculate trace lines
         std::vector<Segment_2> trace_lines;
         generateTraceLine(plate.polygon.outer_boundary(), rotated_poly.outer_boundary(), rotated_center, trace_lines);
+
+        // 2. find nfp rings
         std::vector<std::vector<Segment_2>> nfp_rings;
         mergeTraceLines2Polygon(plate.polygon.outer_boundary(), rotated_center, trace_lines, nfp_rings);
 
@@ -700,6 +762,7 @@ void ModelNesting::generateNFP(Plate& plate, Part& part, Part& result_part) {
             continue;
         }
 
+        // 3. update lower point
         Point_2 lower_point(-1.0, -1.0);
         for (std::vector<Segment_2> nfp_lines : nfp_rings) {
             Point_2 lower_point_tmp = searchLowerPosition(nfp_lines);
@@ -727,6 +790,7 @@ void ModelNesting::generateNFP(Plate& plate, Part& part, Part& result_part) {
             continue;
         }
 
+        // update result_part
         Part rp = part;
         rp.position = lower_point;
         rp.center = rotated_center;
@@ -774,6 +838,7 @@ void ModelNesting::updateCurrentPlate(Plate& currentPlate, Polygon_with_holes_2&
 bool cmpPwhs(Polygon_with_holes_2& a, Polygon_with_holes_2& b) {
     return a.outer_boundary().area() > b.outer_boundary().area();
 }
+
 bool ModelNesting::partPlacement(Plate& plate, Part& part, Part& result_part) {
     log("- partPlacement.\n");
 
@@ -786,7 +851,7 @@ bool ModelNesting::partPlacement(Plate& plate, Part& part, Part& result_part) {
     if (diff_plate_polygons.size() > 1) {
         std::sort(diff_plate_polygons.begin(), diff_plate_polygons.end(), cmpPwhs);
     }
-    result_part.in_place = true;
+    result_part.in_plate = true;
     result_part.id = part.id;
 
     updateCurrentPlate(plate, diff_plate_polygons[0]);
@@ -809,7 +874,7 @@ bool cmpPlate (Plate& a, Plate& b) {
 void ModelNesting::startNFP() {
     log("start NFP\n");
     for (Part& part : parts) {
-        if (part.in_place) {
+        if (part.in_plate) {
             continue;
         }
         std::sort(plates.begin(), plates.end(), cmpPlate);
@@ -865,7 +930,7 @@ void ModelNesting::initialize(std::vector<Plate>& plate, std::vector<Part>& part
             parts[i].polygon = roundAndMulPolygons(simplify_polygon, accuracy);
         }
         parts[i].center = roundAndMulPoint(parts[i].center, accuracy);
-        parts[i].in_place = false;
+        parts[i].in_plate = false;
         parts[i].initializeArea();
     }
     std::sort(parts.begin(), parts.end(), cmpPart);
@@ -893,7 +958,6 @@ void ModelNesting::modelNesting(std::string input_file, std::string output_file,
         logError("Invalid Output File.\n");
         exit(2);
     }
-//test();
 }
 
 }

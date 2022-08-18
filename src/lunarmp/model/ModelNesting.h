@@ -61,7 +61,7 @@ class Part {
     Point_2 center = Point_2(-1, -1);
     double area = 0;
     double abs_area = 0;
-    bool in_place = false;
+    bool in_plate = false;
     int id = -1;
     int is_group = -1;
     int rotation_degree = 0;

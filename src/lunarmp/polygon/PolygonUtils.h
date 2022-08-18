@@ -6,7 +6,6 @@
 #ifndef LUNARMP_SRC_LUNARMP_UTILS_POLYGONUTILS_H_
 #define LUNARMP_SRC_LUNARMP_UTILS_POLYGONUTILS_H_
 
-
 #include "PolygonBase.h"
 
 namespace lunarmp {
@@ -226,6 +225,17 @@ Point_2 add(Point_2 a, Point_2 b) {
 
 Point_2 sub(Point_2 a, Point_2 b) {
     return Point_2(approximate(a.x() - b.x()), approximate(a.y() - b.y()));
+}
+
+Point_2 findLowerPointInPolygon(Polygon_with_holes_2 polygon) {
+    std::vector<Point_2> tmp = polygonToVertices(polygon.outer_boundary());
+    double x = tmp[0].x();
+    double y = tmp[0].y();
+    for (Point_2 p : tmp) {
+        x = std::min(x, p.x());
+        y = std::min(y, p.y());
+    }
+    return Point_2(x, y);
 }
 
 Polygon_2 movePolygon(Polygon_2 polygon, Point_2 offset) {

@@ -24,7 +24,6 @@ typedef K::Vector_2                                                         Vect
 typedef K::FT                                                               FT;
 
 typedef Polygon_2::Vertex_iterator                                          VertexIterator;
-typedef Polygon_2::Edge_const_iterator                                      EdgeIterator;
 
 
 #endif  // LUNARMP_SRC_LUNARMP_UTILS_POLYGONBASE_H_
