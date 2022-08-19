@@ -269,6 +269,7 @@ void writePart(rapidjson::Value& part_array, Part& part, rapidjson::Document::Al
         else {
             part_obj.AddMember("type", "polygon", allocator);
         }
+
         part_obj.AddMember("plate_number", part.in_plate, allocator);
 
         if (is_rotation) {
@@ -338,7 +339,7 @@ void ModelNesting::createJson(rapidjson::Document& doc) {
         }
     }
 
-    doc.AddMember("final_parts", part_array, allocator);
+    doc.AddMember("nesting_result", part_array, allocator);
 }
 
 bool ModelNesting::writeFile(std::string output_file) {
@@ -853,7 +854,7 @@ bool ModelNesting::partPlacement(Plate& plate, Part& part, Part& result_part) {
     if (diff_plate_polygons.size() > 1) {
         std::sort(diff_plate_polygons.begin(), diff_plate_polygons.end(), cmpPwhs);
     }
-    result_part.in_plate = true;
+    result_part.in_plate = plate.id;
     result_part.id = part.id;
 
     updateCurrentPlate(plate, diff_plate_polygons[0]);
@@ -876,7 +877,7 @@ bool cmpPlate (Plate& a, Plate& b) {
 void ModelNesting::startNFP() {
     log("start NFP\n");
     for (Part& part : parts) {
-        if (part.in_plate) {
+        if (part.in_plate != -1) {
             continue;
         }
         std::sort(plates.begin(), plates.end(), cmpPlate);
@@ -932,7 +933,7 @@ void ModelNesting::initialize(std::vector<Plate>& plate, std::vector<Part>& part
             parts[i].polygon = roundAndMulPolygons(simplify_polygon, accuracy);
         }
         parts[i].center = roundAndMulPoint(parts[i].center, accuracy);
-        parts[i].in_plate = false;
+        parts[i].in_plate = -1;
         parts[i].initializeArea();
     }
     std::sort(parts.begin(), parts.end(), cmpPart);
