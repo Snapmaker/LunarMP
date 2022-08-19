@@ -827,6 +827,7 @@ void ModelNesting::updateCurrentPlate(Plate& currentPlate, Polygon_with_holes_2&
         for (Polygon_with_holes_2 pwh : innerPwhs) {
             Plate new_plate = Plate(pwh.outer_boundary());
             new_plate.updateArea();
+            new_plate.id = currentPlate.id;
             tmp_plates.emplace_back(new_plate);
         }
         currentPlate.polygon = tmp_plates[0].polygon;
@@ -863,6 +864,7 @@ bool ModelNesting::partPlacement(Plate& plate, Part& part, Part& result_part) {
         for (Polygon_2 hole : result_part.polygon.holes()) {
             Plate p_hole(hole);
             p_hole.updateArea();
+            p_hole.id = plate.id;
             plates.emplace_back(p_hole);
         }
     }
