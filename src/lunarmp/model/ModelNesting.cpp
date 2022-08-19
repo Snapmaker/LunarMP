@@ -132,6 +132,10 @@ bool ModelNesting::readFile(std::string input_file) {
     rapidjson::Document doc;
     doc.Parse(str.c_str());
 
+    if (doc.HasMember("plate_number")) {
+        plate_number = doc["plate_number"].GetInt();
+    }
+
     if(doc.HasMember("plate")){
         Plate plate;
         const rapidjson::Value& plateV = doc["plate"];
@@ -311,8 +315,8 @@ void writeGroup(rapidjson::Value& part_array, PartGroup& group, Part& part, rapi
 
     rapidjson::Value parts_obj(rapidjson::kArrayType);
     for (Part& model : group.models) {
-        movePolygons(model.polygon, Point_2(-move_vector.x(), move_vector.y()));
-        model.position = sub(model.position, move_vector);
+        model.position = sub(add(sub(part.center, part.position), model.center), move_vector);
+        movePolygons(model.polygon, sub(sub(part.center, part.position), move_vector));
         model.center = getCenter(model.polygon);
         writePart(parts_obj, model, allocator, is_rotation);
     }
@@ -328,7 +332,7 @@ void ModelNesting::createJson(rapidjson::Document& doc) {
 
     for (Part part : result_parts) {
         if (part.is_group == -1) {
-            movePolygons(part.polygon, Point_2(-move_vector.x(), move_vector.y()));
+            movePolygons(part.polygon, Point_2(-move_vector.x(), -move_vector.y()));
             part.position = sub(part.position, move_vector);
             part.center = getCenter(part.polygon);
             writePart(part_array, part, allocator, is_rotation);
@@ -940,6 +944,11 @@ void ModelNesting::initialize(std::vector<Plate>& plate, std::vector<Part>& part
     }
     std::sort(parts.begin(), parts.end(), cmpPart);
 
+    if (plate_number >= 2) {
+        for (int i = 1; i < plate_number; i++) {
+            plates.emplace_back(plates[0]);
+        }
+    }
     for (int i = 0; i < plates.size(); i++) {
         plates[i].id = i;
         simplify_polygon = plates[i].polygon;
