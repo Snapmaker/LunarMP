@@ -10,6 +10,7 @@
 #include "../../rapidjson/rapidjson/document.h"
 #include "../../rapidjson/rapidjson/prettywriter.h"
 #include "../utils/logoutput.h"
+#include "../utils/Enums.h"
 #include "../data/DataGroup.h"
 #include "../polygon/PolygonBase.h"
 
@@ -52,7 +53,7 @@ class Plate {
 class Part {
   public:
     Part(){};
-    Part(Point_2 p, Point_2 c, int id, int g, Polygon_with_holes_2 poly) : position(p), center(c), id(id), is_group(g), polygon(poly) {};
+    Part(Point_2 p, Point_2 c, int id, int g, Polygon_with_holes_2 poly) : position(p), center(c), id(id), group_number(g), polygon(poly) {};
 
     ~Part(){};
 
@@ -64,7 +65,7 @@ class Part {
     double abs_area = 0;
     int in_plate = -1;
     int id = -1;
-    int is_group = -1;
+    int group_number = -1;
     int rotation_degree = 0;
 
     void printPart();
@@ -143,13 +144,25 @@ class ModelNesting {
 
     void startNFP();
 
+    void modelNesting(std::string input_file, std::string output_file, DataGroup& data_group);
+
     bool readFile(std::string input_file);
+
+    void readGroup(const rapidjson::Value& itemV);
+
+    Part readPart(const rapidjson::Value& itemV);
+
+    void readPlate(const rapidjson::Value& itemV);
+
+    Polygon_with_holes_2 readPolygons(const rapidjson::Value& polysV);
+
+    void checkParams(std::string type_name, const rapidjson::Value& item);
 
     bool writeFile(std::string output_file);
 
     void createJson(rapidjson::Document& doc);
 
-    void modelNesting(std::string input_file, std::string output_file, DataGroup& data_group);
+
 };
 
 

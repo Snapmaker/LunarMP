@@ -52,9 +52,16 @@ void PartGroup::initialize()  {
     convex_hull.initializeArea();
 }
 
+void ModelNesting::checkParams(std::string type_name, const rapidjson::Value& item) {
+    if(!item.HasMember(type_name.c_str())) {
+        logError("Missing parameter '%s' in json file.\n", type_name.c_str());
+        exit(2);
+    }
+}
+
 Polygon_2 readPolygon(const rapidjson::Value& polyV) {
     if (polyV.Size() == 0) {
-        logError("--- Empty poly value\n");
+        logError("Empty poly value\n");
         return Polygon_2();
     }
 
@@ -63,49 +70,35 @@ Polygon_2 readPolygon(const rapidjson::Value& polyV) {
         const rapidjson::Value& point = polyV[i];
         polygon.push_back(Point_2(point[0].GetDouble(), point[1].GetDouble()));
     }
-
     return polygon;
 }
 
-Polygon_with_holes_2 readPolygonWithHoles(const rapidjson::Value& polysV) {
-    const rapidjson::Value& outerV = polysV[0];
-    Polygon_2 outer = readPolygon(outerV);
-    if (polysV.Size() >= 2) {
-        std::vector<Polygon_2> holes;
-        for (int i = 1; i < polysV.Size(); i++) {
-            const rapidjson::Value& hols = polysV[i];
-            holes.emplace_back(readPolygon(hols));
-        }
-        return Polygon_with_holes_2(outer, holes.begin(), holes.end());
-    }
+Polygon_with_holes_2 ModelNesting::readPolygons(const rapidjson::Value& polysV) {
+    checkParams("path", polysV);
+    const rapidjson::Value& outerV = polysV["path"];
+    Polygon_with_holes_2 result = Polygon_with_holes_2(readPolygon(outerV));
 
-    return Polygon_with_holes_2(outer);
+    if (polysV.HasMember("holes")) {
+        const rapidjson::Value& innerV = polysV["holes"];
+        for (int i = 0; i < innerV.Size(); i++) {
+            const rapidjson::Value& hole = innerV[i];
+            result.add_hole(readPolygon(hole));
+        }
+        return result;
+    }
+    return result;
 }
 
-Part readPart(const rapidjson::Value& itemV) {
+Part ModelNesting::readPart(const rapidjson::Value& itemV) {
     log("readPart\n");
+    checkParams("id", itemV);
+    checkParams("type", itemV);
+    checkParams("data", itemV);
+
     Part part;
-
-    if (itemV.HasMember("id")) {
-        part.id = itemV["id"].GetInt();
-    }
-    else {
-        logError("Missing parameter 'id' in json part %d.\n", part.id);
-        exit(2);
-    }
-
-    if (itemV.HasMember("polygon_with_holes")) {
-        const rapidjson::Value& pwhV = itemV["polygon_with_holes"];
-        part.polygon = Polygon_with_holes_2(readPolygonWithHoles(pwhV));
-    }
-    else if (itemV.HasMember("polygon")) {
-        const rapidjson::Value& pwhV = itemV["polygon"];
-        part.polygon = Polygon_with_holes_2(readPolygon(pwhV));
-        movePolygons(part.polygon, sub(Point_2(0, 0), findLowerPointInPolygon(part.polygon)));
-        if (part.polygon.outer_boundary().area() < 0) {
-            reversePolygon(part.polygon);
-        }
-    }
+    part.id = itemV["id"].GetInt();
+    const rapidjson::Value& pathV = itemV["data"];
+    part.polygon = Polygon_with_holes_2(readPolygons(pathV));
 
     if (itemV.HasMember("center")) {
         part.center = Point_2(itemV["center"][0].GetDouble(), itemV["center"][1].GetDouble());
@@ -118,6 +111,43 @@ Part readPart(const rapidjson::Value& itemV) {
     return part;
 }
 
+void ModelNesting::readGroup(const rapidjson::Value& itemV) {
+    log("read group.\n");
+
+    // set group
+    PartGroup group;
+    group.convex_hull.id = itemV["id"].GetInt();
+    group.convex_hull.group_number = itemV["id"].GetInt();
+    const rapidjson::Value& modelsV = itemV["data"];
+    if (!modelsV.IsArray()) {
+        logError("Group %d is not array!\n");
+    }
+    for (int j = 0; j < modelsV.Size(); j++) {
+        const rapidjson::Value& groupV = modelsV[j];
+        Part part = readPart(groupV);
+        part.group_number = group.convex_hull.id;
+        group.models.emplace_back(part);
+    }
+    group.initialize();
+    parts.emplace_back(group.convex_hull);
+    part_groups[group.convex_hull.id] = group;
+}
+
+void ModelNesting::readPlate(const rapidjson::Value& itemV) {
+    Plate plate;
+    const rapidjson::Value& plateV = itemV["plate"];
+
+    checkParams("id", plateV);
+    checkParams("type", plateV);
+    checkParams("data", plateV);
+
+    plate.id = plateV["id"].GetInt();
+    const rapidjson::Value& pathV = plateV["data"];
+    plate.polygon = Polygon_with_holes_2(readPolygons(pathV));
+
+    plates.emplace_back(plate);
+}
+
 bool ModelNesting::readFile(std::string input_file) {
     log("read file\n");
 
@@ -126,8 +156,7 @@ bool ModelNesting::readFile(std::string input_file) {
         logError("Invaild input!\n");
         return false;
     }
-    std::string str((std::istreambuf_iterator<char>(ifs)),
-                    std::istreambuf_iterator<char>()); //?
+    std::string str((std::istreambuf_iterator<char>(ifs)),std::istreambuf_iterator<char>());
 
     rapidjson::Document doc;
     doc.Parse(str.c_str());
@@ -136,101 +165,51 @@ bool ModelNesting::readFile(std::string input_file) {
         plate_number = doc["plate_number"].GetInt();
     }
 
-    if(doc.HasMember("plate")){
-        Plate plate;
-        const rapidjson::Value& plateV = doc["plate"];
-        if(plateV.HasMember("polygon")) {
-            plate.polygon = Polygon_with_holes_2(readPolygon(plateV["polygon"]));
-            move_vector = sub(Point_2(0, 0), findLowerPointInPolygon(plate.polygon));
-            movePolygons(plate.polygon, move_vector);
-            if (plate.polygon.outer_boundary().area() > 0) {
-                reversePolygon(plate.polygon);
-            }
-            plate.updateArea();
-        }
-        plates.emplace_back(plate);
+    checkParams("plate", doc);
+    checkParams("rotation", doc);
+    checkParams("distance", doc);
+    checkParams("plate", doc);
+    checkParams("items", doc);
+
+    // set plate
+    readPlate(doc);
+
+    // set rotation
+    is_rotation = doc["rotation"].GetBool();
+    if (!is_rotation) {
+        rotate = 360;
     }
     else {
-        logError("Missing parameter 'plate' in json file.\n");
-        exit(2);
+        checkParams("rotation_step_degree", doc);
+        rotate = doc["rotation_step_degree"].GetInt();
     }
 
-    if (doc.HasMember("rotation")) {
-        is_rotation = doc["rotation"].GetBool();
-        if (!is_rotation) {
-            rotate = 360;
+    // set distance
+    offset = doc["distance"].GetInt();
+
+    // set items
+    const rapidjson::Value& itemsV = doc["items"];
+    if (!itemsV.IsArray()) {
+        logError("Items type error!\n");
+        exit(2);
+    }
+    for (int i = 0; i < itemsV.Size(); i++) {
+        const rapidjson::Value& itemV = itemsV[i];
+        checkParams("id", itemV);
+        checkParams("type", itemV);
+        checkParams("data", itemV);
+
+        std::string type = itemV["type"].GetString();
+        if (type == "polygons") {
+            parts.emplace_back(readPart(itemV));
+        }
+        else if (type == "group") {
+            readGroup(itemV);
         }
         else {
-            if (doc.HasMember("rotation_step_degree")) {
-                rotate = doc["rotation_step_degree"].GetInt();
-            }
-            else {
-                logError("Missing parameter 'rotation_step_degree' in json file.\n");
-                exit(2);
-            }
+            logError("Wrong type from item!\n");
+            exit(2);
         }
-    }
-    else {
-        logError("Missing parameter 'rotation' in json file.\n");
-        exit(2);
-    }
-
-    if (doc.HasMember("distance")) {
-        offset = doc["distance"].GetInt();
-    }
-    else {
-        logError("Missing parameter 'distance' in json file.\n");
-        exit(2);
-    }
-
-    if (doc.HasMember("items")) {
-        const rapidjson::Value& itemsV = doc["items"];
-        if (itemsV.IsArray()) {
-            for (int i = 0; i < itemsV.Size(); i++) {
-                const rapidjson::Value& itemV = itemsV[i];
-                std::string type = itemV["type"].GetString();
-
-                if (type == "polygon_with_holes" || type == "polygon") {
-                    parts.emplace_back(readPart(itemV));
-                }
-                else if (type == "group") {
-                    PartGroup group;
-                    if (itemV.HasMember("id")) {
-                        group.convex_hull.id = itemV["id"].GetInt();
-                        group.convex_hull.is_group = itemV["id"].GetInt();
-                    }
-                    if (itemV.HasMember("polygon_group")) {
-                        const rapidjson::Value& groupsV = itemV["polygon_group"];
-                        if (groupsV.IsArray()) {
-                            for (int j = 0; j < groupsV.Size(); j++) {
-                                const rapidjson::Value& groupV = groupsV[j];
-                                if (groupV.HasMember("polygon_with_holes") || groupV.HasMember("polygon")) {
-                                    group.models.emplace_back(readPart(groupV));
-                                }
-                                else {
-                                    logError("item %d has not 'polygons'!\n", group.convex_hull.id);
-                                    exit(2);
-                                }
-                            }
-                            group.initialize();
-                            for (Part& part : group.models) {
-                                part.is_group = group.convex_hull.id;
-                            }
-                            parts.emplace_back(group.convex_hull);
-                            part_groups[group.convex_hull.id] = group;
-                        }
-                    }
-                }
-                else {
-                    logError("Missing parameter 'polygon' in group!\n");
-                    exit(2);
-                }
-            }
-        }
-    }
-    else {
-        logError("Missing parameter 'items' in json file.\n");
-        exit(2);
     }
     return true;
 }
@@ -266,36 +245,38 @@ void writePart(rapidjson::Value& part_array, Part& part, rapidjson::Document::Al
     part_obj.SetObject();
     part_obj.AddMember("id", part.id, allocator);
 
-    if (part.is_group == -1) {
-        if (part.polygon.number_of_holes() > 0) {
-            part_obj.AddMember("type", "polygon_with_holes", allocator);
-        }
-        else {
-            part_obj.AddMember("type", "polygon", allocator);
-        }
-
+    if (part.group_number == -1) {
+        part_obj.AddMember("type", "polygons", allocator);
         part_obj.AddMember("plate_number", part.in_plate, allocator);
-
         if (is_rotation) {
             part_obj.AddMember("rotation_degree", part.rotation_degree, allocator);
         }
         else {
             part_obj.AddMember("rotation_degree", 0, allocator);
         }
+        part_obj.AddMember("end_position", writePoint(part.position, allocator), allocator);
+        part_obj.AddMember("start_position", writePoint(part.center, allocator), allocator);
     }
 
-    part_obj.AddMember("end_position", writePoint(part.position, allocator), allocator);
-    part_obj.AddMember("start_position", writePoint(part.center, allocator), allocator);
+    if (part.polygon.is_unbounded()) {
+        logError("Wrong calculate by algorithm!\n");
+        exit(2);
+    }
 
-    rapidjson::Value polygons(rapidjson::kArrayType);
+    rapidjson::Value data_obj(rapidjson::kObjectType);
+
+    rapidjson::Value path = writePolygon(part.polygon.outer_boundary(), allocator);
+    data_obj.AddMember("path", path, allocator);
+
     if (part.polygon.number_of_holes() > 0) {
-        writePolygonWithHoles(polygons, part.polygon, allocator);
-        part_obj.AddMember("polygon_with_holes", polygons, allocator);
+        rapidjson::Value holes(rapidjson::kArrayType);
+        for (Polygon_2 h : part.polygon.holes()) {
+            holes.PushBack(writePolygon(h, allocator), allocator);
+        }
+        data_obj.AddMember("holes", holes, allocator);
     }
-    else {
-        polygons = writePolygon(part.polygon.outer_boundary(), allocator);
-        part_obj.AddMember("polygon", polygons, allocator);
-    }
+    part_obj.AddMember("data", data_obj, allocator);
+
     part_array.PushBack(part_obj, allocator);
 }
 
@@ -312,6 +293,11 @@ void writeGroup(rapidjson::Value& part_array, PartGroup& group, Part& part, rapi
     else {
         group_obj.AddMember("rotation_degree", 0, allocator);
     }
+    group.convex_hull.position = sub(add(sub(part.center, part.position), group.convex_hull.center), move_vector);
+    movePolygons(group.convex_hull.polygon, sub(sub(part.center, part.position), move_vector));
+    group.convex_hull.center = getCenter(group.convex_hull.polygon);
+    group_obj.AddMember("end_position", writePoint(group.convex_hull.position, allocator), allocator);
+    group_obj.AddMember("start_position", writePoint(group.convex_hull.center, allocator), allocator);
 
     rapidjson::Value parts_obj(rapidjson::kArrayType);
     for (Part& model : group.models) {
@@ -320,7 +306,7 @@ void writeGroup(rapidjson::Value& part_array, PartGroup& group, Part& part, rapi
         model.center = getCenter(model.polygon);
         writePart(parts_obj, model, allocator, is_rotation);
     }
-    group_obj.AddMember("polygon_group", parts_obj, allocator);
+    group_obj.AddMember("data", parts_obj, allocator);
     part_array.PushBack(group_obj, allocator);
 }
 
@@ -331,14 +317,14 @@ void ModelNesting::createJson(rapidjson::Document& doc) {
     rapidjson::Value part_array(rapidjson::kArrayType);
 
     for (Part part : result_parts) {
-        if (part.is_group == -1) {
+        if (part.group_number == -1) {
             movePolygons(part.polygon, Point_2(-move_vector.x(), -move_vector.y()));
             part.position = sub(part.position, move_vector);
             part.center = getCenter(part.polygon);
             writePart(part_array, part, allocator, is_rotation);
         }
         else {
-            PartGroup group = part_groups[part.is_group];
+            PartGroup group = part_groups[part.group_number];
             writeGroup(part_array, group, part, allocator, is_rotation, move_vector);
         }
     }
@@ -925,9 +911,17 @@ bool cmpPart(Part& a, Part& b) {
 
 void ModelNesting::initialize(std::vector<Plate>& plate, std::vector<Part>& part) {
     log("initialize\n");
-    Polygon_with_holes_2 simplify_polygon;
+
+    move_vector = sub(Point_2(0, 0), findLowerPointInPolygon(plates[0].polygon));
+
     for (int i = 0; i < parts.size(); i++) {
-        simplify_polygon = parts[i].polygon;
+
+        movePolygons(parts[i].polygon, sub(Point_2(0, 0), findLowerPointInPolygon(parts[i].polygon)));
+        if (parts[i].polygon.outer_boundary().area() < 0) {
+            reversePolygon(parts[i].polygon);
+        }
+
+        Polygon_with_holes_2 simplify_polygon = parts[i].polygon;
         simplifyPolygons(simplify_polygon, limit_edge);
 
         if (offset > 0) {
@@ -944,24 +938,27 @@ void ModelNesting::initialize(std::vector<Plate>& plate, std::vector<Part>& part
     }
     std::sort(parts.begin(), parts.end(), cmpPart);
 
+    plates[0].id = 0;
+    movePolygons(plates[0].polygon, move_vector);
+    if (plates[0].polygon.outer_boundary().area() > 0) {
+        reversePolygon(plates[0].polygon);
+    }
+    Polygon_with_holes_2 simplify_polygon = plates[0].polygon;
+    simplifyPolygons(simplify_polygon, limit_edge);
+    plates[0].polygon = roundAndMulPolygons(simplify_polygon, accuracy);
+    plates[0].updateArea();
     if (plate_number >= 2) {
         for (int i = 1; i < plate_number; i++) {
             plates.emplace_back(plates[0]);
+            plates[i].id = i;
         }
-    }
-    for (int i = 0; i < plates.size(); i++) {
-        plates[i].id = i;
-        simplify_polygon = plates[i].polygon;
-        simplifyPolygons(simplify_polygon, limit_edge);
-        plates[i].polygon = roundAndMulPolygons(simplify_polygon, accuracy);
-        plates[i].updateArea();
     }
 }
 
 void ModelNesting::modelNesting(std::string input_file, std::string output_file, DataGroup& data_group) {
     // get data_group
     if (!readFile(input_file)) {
-        logError("Invalid Input File.\n");
+        logError("Invalid input file path.\n");
         exit(2);
     }
     initialize(plates, parts);
@@ -969,7 +966,7 @@ void ModelNesting::modelNesting(std::string input_file, std::string output_file,
     startNFP();
 
     if (!writeFile(output_file)) {
-        logError("Invalid Output File.\n");
+        logError("Invalid output file path.\n");
         exit(2);
     }
 }
