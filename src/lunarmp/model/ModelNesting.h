@@ -57,6 +57,7 @@ class Part {
     ~Part(){};
 
     Polygon_with_holes_2 polygon;
+    Polygon_with_holes_2 rotated_polygon;
     Point_2 position = Point_2(-1, -1);
     Point_2 center = Point_2(-1, -1);
     double area = 0;
