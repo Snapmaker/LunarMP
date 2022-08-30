@@ -59,6 +59,7 @@ class ModelCheck {
      */
     void checkIntersect(Mesh mesh);
 
+    void getIntersectTriangles(Mesh mesh);
     /*!
      * \brief Check the model for errors.
      */
