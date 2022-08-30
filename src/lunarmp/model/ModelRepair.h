@@ -1,7 +1,7 @@
 //
 // Created by Cyril on 2022/3/28.
 //
-
+#pragma once
 #ifndef LUNARMP_MODELREPAIR_H
 #define LUNARMP_MODELREPAIR_H
 

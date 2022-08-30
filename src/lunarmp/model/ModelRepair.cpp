@@ -6,7 +6,9 @@
 #define LUNARMP_POLYGONMESHREPAIR_H
 
 #include "ModelRepair.h"
-
+#include <CGAL/Polygon_mesh_processing/corefinement.h>
+#include <CGAL/Polygon_mesh_processing/intersection.h>
+#include <CGAL/Polygon_mesh_processing/repair_self_intersections.h>
 namespace lunarmp {
 
 void statusCode(int type, char* message) {
@@ -270,9 +272,7 @@ bool ModelRepair::isSelfIntersect(Mesh& mesh) {
 }
 
 void ModelRepair::repairSelfIntersect(Mesh& mesh) {
-    std::vector<std::pair<face_descriptor, face_descriptor> > intersected_tris;
-    PMP::self_intersections<CGAL::Parallel_if_available_tag>(faces(mesh), mesh, std::back_inserter(intersected_tris));
-    log("- %d pairs of triangles intersect.\n", intersected_tris.size());
+    PMP::experimental::remove_self_intersections(mesh, NP::preserve_genus(false));
 }
 
 void ModelRepair::repairModel(std::vector<Point_3>& points, std::vector<std::vector<std::size_t> >& polygons, Mesh& mesh, DataGroup& data_group) {
