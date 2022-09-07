@@ -93,8 +93,8 @@ void ModelSimplification::modelSimplification(std::string input_file, std::strin
         }
         case SimplifyType::EDGE_RATIO_STOP: {
             auto edge_ratio_threshold = data_group.settings.get<double>("edge_ratio_threshold");
-            double edge_count_threshold = mesh.number_of_edges() * 0.5 * edge_ratio_threshold;
-            if (edge_count_threshold < 1) {
+            double edge_count_threshold = mesh.number_of_edges() * edge_ratio_threshold;
+            if (edge_count_threshold < 10) {
                 edgeCollapseGarlandHeckbert(mesh, edge_ratio_threshold);
             }
             else {
