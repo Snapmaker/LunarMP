@@ -26,18 +26,18 @@ jobs:
           git submodule init
           git submodule update
 
-      # 安装特定版本的Boost（使用1.71版本与CGAL兼容）
+      # 安装特定版本的Boost（使用1.76版本与CGAL兼容）
       - name: Install compatible Boost version
         run: |
           brew uninstall boost || true
-          brew install boost@1.71
-          echo 'export PATH="/usr/local/opt/boost@1.71/bin:$PATH"' >> ~/.bash_profile
-          echo 'export LDFLAGS="-L/usr/local/opt/boost@1.71/lib"' >> ~/.bash_profile
-          echo 'export CPPFLAGS="-I/usr/local/opt/boost@1.71/include"' >> ~/.bash_profile
-          export PATH="/usr/local/opt/boost@1.71/bin:$PATH"
-          export LDFLAGS="-L/usr/local/opt/boost@1.71/lib"
-          export CPPFLAGS="-I/usr/local/opt/boost@1.71/include"
-          brew info boost@1.71
+          brew install boost@1.76
+          echo 'export PATH="/usr/local/opt/boost@1.76/bin:$PATH"' >> ~/.bash_profile
+          echo 'export LDFLAGS="-L/usr/local/opt/boost@1.76/lib"' >> ~/.bash_profile
+          echo 'export CPPFLAGS="-I/usr/local/opt/boost@1.76/include"' >> ~/.bash_profile
+          export PATH="/usr/local/opt/boost@1.76/bin:$PATH"
+          export LDFLAGS="-L/usr/local/opt/boost@1.76/lib"
+          export CPPFLAGS="-I/usr/local/opt/boost@1.76/include"
+          brew info boost@1.76
 
       # 添加GMP下载修复
       - name: Fix GMP Download URL
@@ -106,18 +106,18 @@ jobs:
           git submodule init
           git submodule update
 
-      # 安装特定版本的Boost（使用1.71版本与CGAL兼容）
+      # 安装特定版本的Boost（使用1.76版本与CGAL兼容）
       - name: Install compatible Boost version
         run: |
           brew uninstall boost || true
-          brew install boost@1.71
-          echo 'export PATH="/usr/local/opt/boost@1.71/bin:$PATH"' >> ~/.bash_profile
-          echo 'export LDFLAGS="-L/usr/local/opt/boost@1.71/lib"' >> ~/.bash_profile
-          echo 'export CPPFLAGS="-I/usr/local/opt/boost@1.71/include"' >> ~/.bash_profile
-          export PATH="/usr/local/opt/boost@1.71/bin:$PATH"
-          export LDFLAGS="-L/usr/local/opt/boost@1.71/lib"
-          export CPPFLAGS="-I/usr/local/opt/boost@1.71/include"
-          brew info boost@1.71
+          brew install boost@1.76
+          echo 'export PATH="/usr/local/opt/boost@1.76/bin:$PATH"' >> ~/.bash_profile
+          echo 'export LDFLAGS="-L/usr/local/opt/boost@1.76/lib"' >> ~/.bash_profile
+          echo 'export CPPFLAGS="-I/usr/local/opt/boost@1.76/include"' >> ~/.bash_profile
+          export PATH="/usr/local/opt/boost@1.76/bin:$PATH"
+          export LDFLAGS="-L/usr/local/opt/boost@1.76/lib"
+          export CPPFLAGS="-I/usr/local/opt/boost@1.76/include"
+          brew info boost@1.76
 
       - name: install deps
         run: |
