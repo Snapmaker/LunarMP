@@ -15,11 +15,10 @@ jobs:
 
     steps:
       - name: Checkout Code
-        # 更新checkout action版本
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.MY_TOKEN }}
-          submodules: 'recursive'
+          # 移除submodules参数，改为手动处理
+          fetch-depth: 1
 
       - name: install deps
         run: |
@@ -70,11 +69,16 @@ jobs:
 
     steps:
       - name: Checkout Code
-        # 更新checkout action版本
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.MY_TOKEN }}
-          submodules: 'recursive'
+          # 移除submodules参数，改为手动处理
+          fetch-depth: 1
+      
+      # 手动初始化和更新子模块
+      - name: Fetch submodules
+        run: |
+          git submodule init
+          git submodule update
 
       - name: install deps
         run: |
@@ -123,11 +127,16 @@ jobs:
     #        shell: msys2 {0}
     steps:
       - name: Checkout Code
-        # 更新checkout action版本
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.MY_TOKEN }}
-          submodules: 'recursive'
+          # 移除submodules参数，改为手动处理
+          fetch-depth: 1
+      
+      # 手动初始化和更新子模块
+      - name: Fetch submodules
+        run: |
+          git submodule init
+          git submodule update
 
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2.1.0
@@ -199,14 +208,25 @@ jobs:
 
     steps:
       - name: Checkout Code
-        # 更新checkout action版本
         uses: actions/checkout@v4
+        with:
+          # 移除submodules参数，改为手动处理
+          fetch-depth: 1
+      
+      # 手动初始化和更新子模块
+      - name: Fetch submodules
+        run: |
+          git submodule init
+          git submodule update
 
-      - run: |
-          brew install gmp
-          brew install mpfr
-          brew install boost
-          brew install eigen
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgmp-dev
+          sudo apt-get install -y libmpfr-dev
+          sudo apt-get install -y libboost-all-dev
+          sudo apt-get install -y libeigen3-dev
+          
       - run: |
           /bin/bash sh/cmake-deps.sh
           /bin/bash sh/cmake-build.sh
