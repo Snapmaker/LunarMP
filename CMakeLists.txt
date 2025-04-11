@@ -48,7 +48,7 @@ find_package(CGAL REQUIRED)
 target_include_directories(_LunarMP PUBLIC ${CGAL_INCLUDE_DIRS})
 
 # Boost and its components - 首先尝试找到特定版本
-find_package(Boost 1.76 EXACT REQUIRED COMPONENTS graph)
+find_package(Boost REQUIRED COMPONENTS graph)
 
 # 如果无法找到特定版本，则查找范围内的版本
 if(NOT Boost_FOUND)
