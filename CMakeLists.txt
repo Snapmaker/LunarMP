@@ -72,6 +72,8 @@ target_include_directories(_LunarMP PUBLIC src/rapidjson)
 # 添加兼容性相关定义
 add_definitions(-DBOOST_ALLOW_DEPRECATED_HEADERS)
 add_definitions(-DBOOST_PENDING_INTEGER_LOG2_HPP)
+add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
+add_definitions(-DBOOST_DISABLE_PRAGMA_MESSAGE)
 add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=ON)
 
 # 添加包含路径，确保我们的兼容性头文件优先级高于CGAL

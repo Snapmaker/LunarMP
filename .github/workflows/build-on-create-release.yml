@@ -17,28 +17,36 @@ jobs:
           mkdir -p /tmp/boost_src
           cd /tmp/boost_src
           
-          # 使用SourceForge镜像下载Boost 1.76.0源码
+          # 下载Boost 1.76.0源码
           curl -L https://sourceforge.net/projects/boost/files/boost/1.76.0/boost_1_76_0.tar.gz/download -o boost_1_76_0.tar.gz
           tar -xzf boost_1_76_0.tar.gz
           
-          # 如果上面的链接失败，尝试GitHub镜像
-          if [ ! -d "boost_1_76_0" ]; then
-            echo "尝试备用下载源..."
-            curl -L https://github.com/boostorg/boost/releases/download/boost-1.76.0/boost-1.76.0.tar.gz -o boost_1_76_0.tar.gz
-            tar -xzf boost_1_76_0.tar.gz
-          fi
+          # 编辑project-config.jam以添加兼容性标志
+          cd boost_1_76_0
+          echo 'using clang : : : <cxxflags>"-DBOOST_BIND_GLOBAL_PLACEHOLDERS -DBOOST_NO_CXX98_FUNCTION_BASE -std=c++14 -Wno-deprecated-declarations -Wno-deprecated-builtins" ;' >> project-config.jam
           
-          # 如果仍然失败，尝试Debian镜像
-          if [ ! -d "boost_1_76_0" ]; then
-            echo "尝试Debian镜像..."
-            curl -L http://archive.debian.org/debian/pool/main/b/boost1.76/boost1.76_1.76.0.orig.tar.gz -o boost_1_76_0.tar.gz
-            tar -xzf boost_1_76_0.tar.gz
-          fi
+          # 应用补丁解决piecewise_construct问题
+          cat > piecewise_patch.hpp << 'EOF'
+          // 兼容性补丁文件
+          #ifndef BOOST_COMPAT_PIECEWISE_PATCH_HPP
+          #define BOOST_COMPAT_PIECEWISE_PATCH_HPP
           
-          # 编译和安装(只构建graph库，这是我们需要的)
-          cd boost_1_76_0 || cd boost-1.76.0 || cd boost-1.76.0
+          namespace std {
+            constexpr struct piecewise_construct_t { } piecewise_construct = piecewise_construct_t();
+          }
+          
+          #endif
+          EOF
+          
+          # 将补丁文件复制到Boost头文件目录
+          cp piecewise_patch.hpp boost/unordered/detail/
+          
+          # 修改fwd.hpp文件
+          sed -i.bak 's|using std::piecewise_construct;|#include <boost/unordered/detail/piecewise_patch.hpp>|' boost/unordered/detail/fwd.hpp
+          
+          # 编译和安装Boost
           ./bootstrap.sh --prefix=/tmp/boost_install
-          ./b2 --with-graph --prefix=/tmp/boost_install -j$(sysctl -n hw.ncpu) install
+          ./b2 --with-graph --prefix=/tmp/boost_install -j$(sysctl -n hw.ncpu) cxxflags="-DBOOST_BIND_GLOBAL_PLACEHOLDERS -std=c++14 -Wno-deprecated-declarations -Wno-deprecated-builtins" install
           
           # 设置环境变量
           echo "BOOST_ROOT=/tmp/boost_install" >> $GITHUB_ENV
