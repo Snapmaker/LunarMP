@@ -316,7 +316,12 @@ struct GenericStringRef {
 
     GenericStringRef(const GenericStringRef& rhs) : s(rhs.s), length(rhs.length) {}
 
-    GenericStringRef& operator=(const GenericStringRef& rhs) { s = rhs.s; length = rhs.length; }
+    GenericStringRef& operator=(const GenericStringRef& rhs) { 
+        s = rhs.s; 
+        // length is a read-only member, so we use const_cast to modify it
+        const_cast<SizeType&>(length) = rhs.length;
+        return *this;
+    }
 
     //! implicit conversion to plain CharType pointer
     operator const Ch *() const { return s; }

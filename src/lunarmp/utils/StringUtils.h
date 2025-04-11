@@ -2,6 +2,7 @@
 #define LUNARMP_SRC_LUNARMP_UTILS_STRINGUTILS_H_
 
 #include <algorithm>
+#include <cstdint>
 #include <sstream>
 #include <algorithm>
 
