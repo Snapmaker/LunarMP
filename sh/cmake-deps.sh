@@ -79,6 +79,11 @@ fi
 ${CMAKE_DIR} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${CMAKE_EXTRA_ARGS} -G "${CodeBlocks}" -S ./ -B ${BUILD_DIR}
 ${CMAKE_DIR} --build ./${BUILD_DIR} --target ${INSTALL_TARGET} -- -j 4
 
+# 在CGAL安装完成后添加
+echo "应用CGAL补丁..."
+chmod +x patch-cgal.sh
+./patch-cgal.sh
+
 # 为CGAL添加兼容性补丁，解决boost::prior的问题
 CGAL_INCLUDE_DIR="${DEPS_DIR}/${BUILD_DIR}/install/usr/local/include/CGAL"
 if [ -d "${CGAL_INCLUDE_DIR}" ]; then

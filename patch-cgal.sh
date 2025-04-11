@@ -1,9 +1,18 @@
 #!/bin/bash
 
-# 找到 CGAL 包含目录
-CGAL_DIR=$(find /usr -name CGAL -type d 2>/dev/null | grep -v CMakeFiles | head -1)
-if [ -z "$CGAL_DIR" ]; then
-  CGAL_DIR=$(find /opt -name CGAL -type d 2>/dev/null | grep -v CMakeFiles | head -1)
+# 特别针对CI环境的路径查找
+if [ -n "$GITHUB_WORKSPACE" ]; then
+  # 在GitHub Actions环境中
+  CGAL_DIR=$(find $GITHUB_WORKSPACE -name CGAL -type d 2>/dev/null | grep -v CMakeFiles | head -1)
+  if [ -z "$CGAL_DIR" ]; then
+    CGAL_DIR=$(find /usr -name CGAL -type d 2>/dev/null | grep -v CMakeFiles | head -1)
+  fi
+else
+  # 常规环境
+  CGAL_DIR=$(find /usr -name CGAL -type d 2>/dev/null | grep -v CMakeFiles | head -1)
+  if [ -z "$CGAL_DIR" ]; then
+    CGAL_DIR=$(find /opt -name CGAL -type d 2>/dev/null | grep -v CMakeFiles | head -1)
+  fi
 fi
 
 if [ -z "$CGAL_DIR" ]; then

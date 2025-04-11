@@ -3,17 +3,11 @@
 
 #include <iterator>
 
-// 确保引入boost头文件
+// 我们不需要重定义boost::prior，而是需要确保 
+// CGAL正确使用现有的prior
 #include <boost/version.hpp>
 
-// 从源代码错误来看，boost::prior已经定义但CGAL无法找到它
-// 我们只提供一个简单的命名空间级别的定义
-namespace boost {
-    // 这个函数会在boost::prior不存在时被使用
-    template <typename Iterator>
-    Iterator prior(Iterator it) {
-        return std::prev(it);
-    }
-}
+// 由于我们不能修改整个项目的源代码，我们使用补丁脚本
+// 运行patch-cgal.sh来修复CGAL源码
 
 #endif // LUNAR_MP_BOOST_COMPAT_H 

@@ -91,6 +91,11 @@ jobs:
         with:
           files: LunarMP-mac.zip
 
+      - name: 应用CGAL补丁
+        run: |
+          chmod +x patch-cgal.sh
+          ./patch-cgal.sh
+
   build-macos-arm64:
     name: Build MacOS Packages (ARM64)
 
@@ -158,6 +163,11 @@ jobs:
           
           chmod +x fix_boost_prior.sh
           ./fix_boost_prior.sh
+
+      - name: 应用CGAL补丁
+        run: |
+          chmod +x patch-cgal.sh
+          ./patch-cgal.sh
 
   build-windows:
     name: Build Windows packages
@@ -274,6 +284,11 @@ jobs:
           chmod +x fix_boost_prior.sh
           ./fix_boost_prior.sh
 
+      - name: 应用CGAL补丁
+        run: |
+          chmod +x patch-cgal.sh
+          ./patch-cgal.sh
+
   build-ubuntu:
     name: Build Ubuntu packages
 
@@ -348,3 +363,8 @@ jobs:
           
           chmod +x fix_boost_prior.sh
           ./fix_boost_prior.sh
+
+      - name: 应用CGAL补丁
+        run: |
+          chmod +x patch-cgal.sh
+          ./patch-cgal.sh

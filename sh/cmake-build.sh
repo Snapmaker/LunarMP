@@ -22,6 +22,11 @@ fi
 
 cd "${PROJECT_DIR}" || exit
 
+# 在构建之前应用CGAL补丁
+echo "应用CGAL补丁..."
+chmod +x patch-cgal.sh
+./patch-cgal.sh
+
 echo "${CMAKE_DIR} -DCMAKE_PREFIX_PATH="${DEPS}" -DPKG_CONFIG_PATH="${DEPS}" -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -G "${CodeBlocks}" -S ./ -B ${BUILD_DIR}"
 ${CMAKE_DIR} -DCMAKE_PREFIX_PATH="${DEPS}" -DPKG_CONFIG_PATH="${DEPS}" -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -G "${CodeBlocks}" -S ./ -B ${BUILD_DIR}
 ${CMAKE_DIR} --build ./${BUILD_DIR} --target LunarMP -- -j 4
