@@ -17,17 +17,34 @@ jobs:
           mkdir -p /tmp/boost_src
           cd /tmp/boost_src
           
-          # 下载Boost 1.76.0源码
-          curl -L https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz -o boost_1_76_0.tar.gz
+          # 使用SourceForge镜像下载Boost 1.76.0源码
+          curl -L https://sourceforge.net/projects/boost/files/boost/1.76.0/boost_1_76_0.tar.gz/download -o boost_1_76_0.tar.gz
           tar -xzf boost_1_76_0.tar.gz
           
+          # 如果上面的链接失败，尝试GitHub镜像
+          if [ ! -d "boost_1_76_0" ]; then
+            echo "尝试备用下载源..."
+            curl -L https://github.com/boostorg/boost/releases/download/boost-1.76.0/boost-1.76.0.tar.gz -o boost_1_76_0.tar.gz
+            tar -xzf boost_1_76_0.tar.gz
+          fi
+          
+          # 如果仍然失败，尝试Debian镜像
+          if [ ! -d "boost_1_76_0" ]; then
+            echo "尝试Debian镜像..."
+            curl -L http://archive.debian.org/debian/pool/main/b/boost1.76/boost1.76_1.76.0.orig.tar.gz -o boost_1_76_0.tar.gz
+            tar -xzf boost_1_76_0.tar.gz
+          fi
+          
           # 编译和安装(只构建graph库，这是我们需要的)
-          cd boost_1_76_0
+          cd boost_1_76_0 || cd boost-1.76.0 || cd boost-1.76.0
           ./bootstrap.sh --prefix=/tmp/boost_install
           ./b2 --with-graph --prefix=/tmp/boost_install -j$(sysctl -n hw.ncpu) install
           
           # 设置环境变量
           echo "BOOST_ROOT=/tmp/boost_install" >> $GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=/tmp/boost_install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
+          echo "BOOST_INCLUDEDIR=/tmp/boost_install/include" >> $GITHUB_ENV
+          echo "BOOST_LIBRARYDIR=/tmp/boost_install/lib" >> $GITHUB_ENV
           
       # 上传Boost构建产物
       - name: Upload Boost artifact
@@ -288,12 +305,26 @@ jobs:
           mkdir -p /tmp/boost_src
           cd /tmp/boost_src
           
-          # 下载Boost 1.76.0源码
-          curl -L https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz -o boost_1_76_0.tar.gz
+          # 使用SourceForge镜像下载Boost 1.76.0源码
+          curl -L https://sourceforge.net/projects/boost/files/boost/1.76.0/boost_1_76_0.tar.gz/download -o boost_1_76_0.tar.gz
           tar -xzf boost_1_76_0.tar.gz
           
+          # 如果上面的链接失败，尝试GitHub镜像
+          if [ ! -d "boost_1_76_0" ]; then
+            echo "尝试备用下载源..."
+            curl -L https://github.com/boostorg/boost/releases/download/boost-1.76.0/boost-1.76.0.tar.gz -o boost_1_76_0.tar.gz
+            tar -xzf boost_1_76_0.tar.gz
+          fi
+          
+          # 如果仍然失败，尝试Debian镜像
+          if [ ! -d "boost_1_76_0" ]; then
+            echo "尝试Debian镜像..."
+            curl -L http://archive.debian.org/debian/pool/main/b/boost1.76/boost1.76_1.76.0.orig.tar.gz -o boost_1_76_0.tar.gz
+            tar -xzf boost_1_76_0.tar.gz
+          fi
+          
           # 编译和安装(只构建graph库，这是我们需要的)
-          cd boost_1_76_0
+          cd boost_1_76_0 || cd boost-1.76.0 || cd boost-1.76.0
           ./bootstrap.sh --prefix=/tmp/boost_install
           ./b2 --with-graph --prefix=/tmp/boost_install -j$(sysctl -n hw.ncpu) install
           
