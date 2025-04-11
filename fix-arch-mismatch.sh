@@ -5,59 +5,59 @@
 if [[ $(uname -m) == "arm64" ]]; then
   echo "===== 检测到 ARM64 架构，正在应用全面架构兼容性修复 ====="
   
-  # 1. 设置通用编译标志确保所有库使用正确的ARM64架构
-  export CFLAGS="-arch arm64"
-  export CXXFLAGS="-arch arm64"
+  # 更强力的架构强制设置
+  export CFLAGS="-arch arm64 -mtune=native"
+  export CXXFLAGS="-arch arm64 -mtune=native"
   export LDFLAGS="-arch arm64"
+  export ABI="arm64-darwin"  # 关键：为GMP设置正确的ABI
   
-  # 2. 添加特定的MACOSX_DEPLOYMENT_TARGET环境变量
-  export MACOSX_DEPLOYMENT_TARGET="11.0"
+  # 针对GMP/MPFR的特殊配置
+  export GMP_HOST="arm64-apple-darwin"
+  export MPFR_HOST="arm64-apple-darwin"
   
-  # 3. 配置CMake以正确使用ARM64架构
-  export CMAKE_OSX_ARCHITECTURES="arm64"
+  # 保存环境变量
+  echo "CFLAGS=$CFLAGS" >> $GITHUB_ENV
+  echo "CXXFLAGS=$CXXFLAGS" >> $GITHUB_ENV
+  echo "LDFLAGS=$LDFLAGS" >> $GITHUB_ENV
+  echo "ABI=$ABI" >> $GITHUB_ENV
+  echo "GMP_HOST=$GMP_HOST" >> $GITHUB_ENV
+  echo "MPFR_HOST=$MPFR_HOST" >> $GITHUB_ENV
   
-  # 4. 保存环境变量供workflow后续步骤使用
-  echo "CFLAGS=-arch arm64" >> $GITHUB_ENV
-  echo "CXXFLAGS=-arch arm64" >> $GITHUB_ENV
-  echo "LDFLAGS=-arch arm64" >> $GITHUB_ENV
-  echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
-  echo "CMAKE_OSX_ARCHITECTURES=arm64" >> $GITHUB_ENV
+  # 创建临时目录用于自定义编译
+  CUSTOM_BUILD_DIR="$PWD/arm64_custom_build"
+  mkdir -p "$CUSTOM_BUILD_DIR"
   
-  # 5. 确保Homebrew使用正确的架构
-  echo "HOMEBREW_ARCH=arm64" >> $GITHUB_ENV
+  # 修改依赖构建脚本
+  if [ -f "sh/cmake-deps.sh" ]; then
+    echo "深度修改cmake-deps.sh脚本以确保ARM64兼容性..."
+    
+    # 备份原始脚本
+    cp sh/cmake-deps.sh sh/cmake-deps.sh.orig
+    
+    # 修改GMP配置
+    sed -i.bak1 's/\.\/configure/\.\/configure --build=arm64-apple-darwin --host=arm64-apple-darwin --enable-shared=no --enable-static=yes ABI=arm64-darwin/g' sh/cmake-deps.sh
+    
+    # 修改MPFR配置
+    sed -i.bak2 's/\.\/configure --with-gmp.*/\.\/configure --with-gmp=\$\{DEPS_INSTALL_PREFIX\} --build=arm64-apple-darwin --host=arm64-apple-darwin --enable-shared=no --enable-static=yes/g' sh/cmake-deps.sh
+    
+    # 确保使用正确的链接器标志
+    echo 'export LDFLAGS="-arch arm64"' >> sh/cmake-deps.sh
+  fi
   
-  # 6. 如果deps目录已存在，清理并重新编译
+  # 清理现有构建
   if [ -d "./deps" ]; then
-    echo "清理现有构建和依赖目录以进行架构正确的重新编译..."
+    echo "清理现有构建目录以使用正确的架构重新编译..."
     rm -rf ./deps ./build
   fi
   
-  # 7. 修改cmake-deps.sh脚本，添加特定的配置参数
-  if [ -f "sh/cmake-deps.sh" ]; then
-    echo "修改cmake-deps.sh脚本添加ARM64专用配置..."
-    # 为所有依赖库的configure步骤添加--build=arm64-apple-darwin
-    sed -i.bak 's/\.\/configure/\.\/configure --build=arm64-apple-darwin/g' sh/cmake-deps.sh
+  # 手动下载和预处理GMP（如果需要）
+  mkdir -p deps/download
+  if [ ! -f "deps/download/gmp-6.2.1.tar.bz2" ]; then
+    echo "下载GMP源码..."
+    curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2
   fi
   
-  # 8. 添加库特定修复
-  echo "为特定库应用架构修复..."
-  
-  # GMP特定修复
-  if grep -q "gmp" sh/cmake-deps.sh; then
-    echo "应用GMP库ARM64特定修复..."
-    if [ -d "deps/download" ] && [ -f "deps/download/gmp-6.2.1.tar.bz2" ]; then
-      # 可以考虑替换为ARM64原生预编译版本或特殊配置
-      echo "GMP已下载，准备使用ARM64特定配置重新编译..."
-    fi
-  fi
-  
-  # MPFR特定修复 (通常也会有架构问题)
-  if grep -q "mpfr" sh/cmake-deps.sh; then
-    echo "应用MPFR库ARM64特定修复..."
-    # 类似GMP的修复方式
-  fi
-  
-  echo "ARM64全面架构兼容性修复完成！"
+  echo "ARM64架构深度兼容性修复完成！"
 else
   echo "非ARM64架构，不需要特殊处理。"
 fi 

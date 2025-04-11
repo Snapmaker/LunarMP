@@ -92,17 +92,31 @@ jobs:
           chmod +x process-cgal.sh
           ./process-cgal.sh
           
-          # 构建过程
-          source compile_env.sh || true
-          CMAKE_EXTRA_ARGS=""
+          # 构建过程 - 使用更详细的ARM64设置
           if [[ $(uname -m) == "arm64" ]]; then
-            CMAKE_EXTRA_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64"
+            echo "在ARM64环境下使用特殊构建步骤..."
+            # 确保deps干净
+            rm -rf ./deps ./build
+            
+            # 设置特定构建参数并构建依赖
+            export ABI="arm64-darwin"
+            export CFLAGS="-arch arm64 -mtune=native"
+            export CXXFLAGS="-arch arm64 -mtune=native"
+            export LDFLAGS="-arch arm64"
+            /bin/bash sh/cmake-deps.sh
+            
+            # 处理CGAL兼容性
+            ./process-cgal.sh
+            
+            # 使用ARM64特定设置构建主项目
+            CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64" /bin/bash sh/cmake-build.sh
+          else
+            # 正常构建流程
+            source compile_env.sh || true
+            /bin/bash sh/cmake-deps.sh
+            ./process-cgal.sh
+            /bin/bash sh/cmake-build.sh
           fi
-          
-          # 使用ARM64特定参数进行构建
-          /bin/bash sh/cmake-deps.sh
-          ./process-cgal.sh
-          CMAKE_ARGS="$CMAKE_EXTRA_ARGS" /bin/bash sh/cmake-build.sh
 
       # 测试
       - name: Test
