@@ -204,7 +204,7 @@ jobs:
 
   build-macos-arm64:
     name: Build MacOS Packages (ARM64)
-    runs-on: macos-13
+    runs-on: macos-latest
 
     steps:
       - name: Checkout Code
