@@ -9,7 +9,7 @@ on:
 jobs:
   build-macos:
     name: Build MacOS Packages (Intel)
-    runs-on: macos-12  # 使用较稳定的macOS版本
+    runs-on: macos-13  # 使用较稳定的macOS版本
 
     steps:
       - name: Checkout Code
@@ -26,10 +26,10 @@ jobs:
       # 安装Boost及创建兼容层
       - name: Install Boost
         run: |
-          # 尝试按优先级安装Boost
-          brew install boost@1.71 || brew install boost@1.72 || brew install boost@1.76 || brew install boost
+          # 直接安装最新版Boost
+          brew install boost
           
-          # 创建兼容层
+          # 创建兼容层以解决CGAL与新版Boost的兼容性问题
           mkdir -p /tmp/boost_compat/boost
           cat > /tmp/boost_compat/boost/next_prior.hpp << 'EOF'
           #ifndef BOOST_NEXT_PRIOR_HPP_INCLUDED
@@ -62,6 +62,9 @@ jobs:
           
           # 确保构建时包含兼容层
           echo "CPPFLAGS=-I/tmp/boost_compat" >> $GITHUB_ENV
+          echo "BOOST_INCLUDEDIR=$(brew --prefix boost)/include" >> $GITHUB_ENV
+          echo "BOOST_LIBRARYDIR=$(brew --prefix boost)/lib" >> $GITHUB_ENV
+          echo "BOOST_VERSION=$(brew info --json boost | jq -r '.[0].versions.stable')" >> $GITHUB_ENV
 
       # 修复GMP下载链接
       - name: Fix GMP Download URL
@@ -141,10 +144,10 @@ jobs:
       # 安装Boost及创建兼容层
       - name: Install Boost
         run: |
-          # 尝试按优先级安装Boost
-          brew install boost@1.71 || brew install boost@1.72 || brew install boost@1.76 || brew install boost
+          # 直接安装最新版Boost
+          brew install boost
           
-          # 创建兼容层
+          # 创建兼容层以解决CGAL与新版Boost的兼容性问题
           mkdir -p /tmp/boost_compat/boost
           cat > /tmp/boost_compat/boost/next_prior.hpp << 'EOF'
           #ifndef BOOST_NEXT_PRIOR_HPP_INCLUDED
@@ -177,6 +180,9 @@ jobs:
           
           # 确保构建时包含兼容层
           echo "CPPFLAGS=-I/tmp/boost_compat" >> $GITHUB_ENV
+          echo "BOOST_INCLUDEDIR=$(brew --prefix boost)/include" >> $GITHUB_ENV
+          echo "BOOST_LIBRARYDIR=$(brew --prefix boost)/lib" >> $GITHUB_ENV
+          echo "BOOST_VERSION=$(brew info --json boost | jq -r '.[0].versions.stable')" >> $GITHUB_ENV
 
       # 修复GMP下载链接
       - name: Fix GMP Download URL
@@ -230,123 +236,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: LunarMP-mac-arm64.zip
-
-      # 应用CGAL补丁
-      - name: Apply CGAL patch
-        run: |
-          chmod +x patch-cgal.sh
-          ./patch-cgal.sh
-
-  build_macos_boost_1_76:
-    name: Build MacOS Packages (Boost 1.76)
-    runs-on: macos-12  # 使用较稳定的macOS版本
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-      
-      # 手动初始化和更新子模块
-      - name: Fetch submodules
-        run: |
-          git submodule init
-          git submodule update
-
-      # 安装Boost及创建兼容层
-      - name: Install Boost 1.76
-        run: |
-          # 尝试安装Boost 1.76
-          brew install boost@1.76 || brew install boost
-          
-          # 创建兼容层
-          mkdir -p /tmp/boost_compat/boost
-          cat > /tmp/boost_compat/boost/next_prior.hpp << 'EOF'
-          #ifndef BOOST_NEXT_PRIOR_HPP_INCLUDED
-          #define BOOST_NEXT_PRIOR_HPP_INCLUDED
-          
-          #include <iterator>
-          
-          namespace boost {
-              template <class T>
-              inline T prior(T x) { return --x; }
-          
-              template <class T, class Distance>
-              inline T prior(T x, Distance n) {
-                  std::advance(x, -n);
-                  return x;
-              }
-          
-              template <class T>
-              inline T next(T x) { return ++x; }
-          
-              template <class T, class Distance>
-              inline T next(T x, Distance n) {
-                  std::advance(x, n);
-                  return x;
-              }
-          }
-          
-          #endif // BOOST_NEXT_PRIOR_HPP_INCLUDED
-          EOF
-          
-          # 确保构建时包含兼容层
-          echo "CPPFLAGS=-I/tmp/boost_compat" >> $GITHUB_ENV
-          # 设置Boost版本标记以在CMake中优先查找1.76
-          echo "BOOST_ROOT=$(brew --prefix)/opt/boost@1.76" >> $GITHUB_ENV
-
-      # 修复GMP下载链接
-      - name: Fix GMP Download URL
-        run: |
-          sed -i.bak 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
-          mkdir -p deps/download
-          curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
-
-      # 安装其他依赖
-      - name: Install dependencies
-        run: |
-          brew install mpfr eigen
-
-      # 构建项目
-      - name: Build project
-        run: |
-          /bin/bash sh/cmake-deps.sh
-          /bin/bash sh/cmake-build.sh
-
-      # 测试
-      - name: Test
-        run: ./build/LunarMP version && ./build/LunarMP ptest
-      
-      # 准备输出
-      - name: Prepare output
-        run: mkdir output && cp ./build/LunarMP ./output/LunarMP
-
-      # 代码签名
-      - name: Code signing
-        uses: apple-actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
-          p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
-
-      - name: Sign binary
-        run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
-
-      # 打包
-      - name: Zip output
-        uses: thedoctor0/zip-release@master
-        with:
-          type: zip
-          filename: LunarMP-mac-boost-1.76.zip
-          directory: ./
-          path: ./output
-
-      # 上传
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: LunarMP-mac-boost-1.76.zip
 
       # 应用CGAL补丁
       - name: Apply CGAL patch
