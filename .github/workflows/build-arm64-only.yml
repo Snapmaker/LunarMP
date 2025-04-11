@@ -101,13 +101,13 @@ jobs:
           cd output && zip -r ../LunarMP-mac-arm64.zip ./*
 
       - name: 上传构建产物
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: LunarMP-mac-arm64
           path: LunarMP-mac-arm64.zip
           
       - name: 上传到Release
         if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: LunarMP-mac-arm64.zip 
