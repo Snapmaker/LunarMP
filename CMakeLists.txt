@@ -43,40 +43,28 @@ find_package(MPFR REQUIRED)
 find_package(Eigen3 REQUIRED)
 target_include_directories(_LunarMP PUBLIC ${EIGEN3_INCLUDE_DIR})
 
-# CGAL and its components
+# CGAL - 查找最新版本，不指定特定版本
 find_package(CGAL REQUIRED)
 target_include_directories(_LunarMP PUBLIC ${CGAL_INCLUDE_DIRS})
 
-# Boost and its components - 首先尝试找到特定版本
+# Boost - 查找任何可用版本，不再指定特定版本
 find_package(Boost REQUIRED COMPONENTS graph)
-
-# 如果无法找到特定版本，则查找范围内的版本
-if(NOT Boost_FOUND)
-  find_package(Boost 1.65.1...1.76.0 REQUIRED COMPONENTS graph)
-endif()
-
-# 如果仍未找到，则查找任何可用版本
-if(NOT Boost_FOUND)
-  message(STATUS "尝试查找任何可用的Boost版本...")
-  find_package(Boost REQUIRED COMPONENTS graph)
-endif()
 
 message(STATUS "找到的Boost版本: ${Boost_VERSION}")
 message(STATUS "Boost包含目录: ${Boost_INCLUDE_DIRS}")
 message(STATUS "Boost库目录: ${Boost_LIBRARY_DIRS}")
 
+# 链接CGAL库
 target_link_libraries(_LunarMP PUBLIC CGAL::CGAL)
 
 target_include_directories(_LunarMP PUBLIC src/rapidjson)
 
-# 添加兼容性相关定义
-add_definitions(-DBOOST_ALLOW_DEPRECATED_HEADERS)
-add_definitions(-DBOOST_PENDING_INTEGER_LOG2_HPP)
+# 添加兼容性相关定义 - 使用新版Boost和CGAL时仍然需要部分标志
 add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 add_definitions(-DBOOST_DISABLE_PRAGMA_MESSAGE)
 add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=ON)
 
-# 添加包含路径，确保我们的兼容性头文件优先级高于CGAL
+# 确保我们的兼容性头文件优先级高于CGAL
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # 删除有问题的宏定义
