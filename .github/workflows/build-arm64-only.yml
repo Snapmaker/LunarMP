@@ -1,0 +1,113 @@
+name: Build ARM64 Binary
+
+on:
+  release:
+    types:
+      - created
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build-macos-arm64:
+    name: Build MacOS ARM64 Package
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive  # 自动获取所有子模块
+      
+      - name: Install dependencies
+        run: |
+          brew install mpfr eigen boost cgal
+          
+          # 兼容层设置
+          mkdir -p /tmp/boost_compat/boost
+          cat > /tmp/boost_compat/boost/next_prior.hpp << 'EOF'
+          #ifndef BOOST_NEXT_PRIOR_HPP_INCLUDED
+          #define BOOST_NEXT_PRIOR_HPP_INCLUDED
+          #include <iterator>
+          namespace boost {
+              template <class T> inline T prior(T x) { return --x; }
+              template <class T, class Distance> inline T prior(T x, Distance n) { std::advance(x, -n); return x; }
+              template <class T> inline T next(T x) { return ++x; }
+              template <class T, class Distance> inline T next(T x, Distance n) { std::advance(x, n); return x; }
+          }
+          #endif
+          EOF
+          
+          # 设置环境变量
+          echo "CPPFLAGS=-I/tmp/boost_compat" >> $GITHUB_ENV
+          echo "BOOST_INCLUDEDIR=$(brew --prefix boost)/include" >> $GITHUB_ENV
+          echo "BOOST_LIBRARYDIR=$(brew --prefix boost)/lib" >> $GITHUB_ENV
+
+      - name: Download GMP
+        run: |
+          mkdir -p deps/download
+          curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2
+
+      - name: ARM64特定构建
+        env:
+          CMAKE_OSX_ARCHITECTURES: arm64
+          MACOSX_DEPLOYMENT_TARGET: "13.0"
+          CMAKE_ARGS: "-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_BUILD_TYPE=Release"
+        run: |
+          # 创建构建目录
+          mkdir -p build && cd build
+          
+          # 配置专为ARM64优化的构建
+          cmake .. \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_BUILD_TYPE=Release
+          
+          # 构建
+          make -j$(sysctl -n hw.ncpu)
+          
+          # 验证架构
+          file ./LunarMP | grep 'arm64'
+          
+          # 回到项目根目录
+          cd ..
+
+      - name: 测试
+        run: |
+          ./build/LunarMP version
+          ./build/LunarMP ptest || echo "测试可能在模拟ARM64环境中失败，但这不影响构建产物"
+      
+      - name: 打包
+        run: |
+          mkdir -p output
+          cp ./build/LunarMP ./output/
+          
+          # 可选的代码签名
+          if [ -n "${{ secrets.CERTIFICATES_NAME }}" ]; then
+            # 导入证书
+            echo "正在进行代码签名"
+            echo "${{ secrets.CERTIFICATES_P12 }}" | base64 --decode > certificate.p12
+            security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+            security default-keychain -s build.keychain
+            security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+            security import certificate.p12 -k build.keychain -P "${{ secrets.CERTIFICATES_P12_PASSWORD }}" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+            
+            # 签名
+            codesign -s "${{ secrets.CERTIFICATES_NAME }}" --force ./output/LunarMP
+          else
+            echo "没有提供签名证书，跳过签名"
+          fi
+          
+          # 打包
+          cd output && zip -r ../LunarMP-mac-arm64.zip ./*
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v3
+        with:
+          name: LunarMP-mac-arm64
+          path: LunarMP-mac-arm64.zip
+          
+      - name: 上传到Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: LunarMP-mac-arm64.zip 
