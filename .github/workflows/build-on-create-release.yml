@@ -84,17 +84,24 @@ jobs:
       # 构建项目
       - name: Build project
         run: |
-          # 应用架构特定配置
+          # 架构特定处理
           chmod +x fix-arch-mismatch.sh
           ./fix-arch-mismatch.sh
           
-          # CGAL兼容性处理
+          # 处理CGAL
           chmod +x process-cgal.sh
           ./process-cgal.sh
           
-          # 构建依赖和项目
-          /bin/bash sh/cmake-deps.sh
+          # 构建主项目 (需要注意ARM64已经在fix-arch-mismatch.sh中构建了依赖)
+          if [[ $(uname -m) != "arm64" ]]; then
+            # 只在非ARM64环境中运行标准依赖构建
+            /bin/bash sh/cmake-deps.sh
+          fi
+          
+          # 再次运行CGAL处理
           ./process-cgal.sh
+          
+          # 构建主项目，使用任何设置的CMAKE_ARGS
           /bin/bash sh/cmake-build.sh
 
       # 测试
@@ -105,15 +112,22 @@ jobs:
       - name: Prepare output
         run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
-      # 代码签名
-      - name: Code signing
+      # 完整的代码签名过程
+      - name: Prepare for code signing
+        run: mkdir -p ./output && cp ./build/LunarMP ./output/LunarMP
+
+      # 导入证书
+      - name: Import code signing certificates
         uses: apple-actions/import-codesign-certs@v1
         with:
           p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
           p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
 
-      - name: Sign binary
-        run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
+      # 安全的签名步骤
+      - name: Sign the binary
+        run: |
+          # 使用双引号处理特殊字符
+          codesign -s "${{ secrets.CERTIFICATES_NAME }}" --force ./output/LunarMP
 
       # 打包
       - name: Zip output
@@ -252,17 +266,24 @@ jobs:
       # 构建项目
       - name: Build project
         run: |
-          # 应用架构特定配置
+          # 架构特定处理
           chmod +x fix-arch-mismatch.sh
           ./fix-arch-mismatch.sh
           
-          # CGAL兼容性处理
+          # 处理CGAL
           chmod +x process-cgal.sh
           ./process-cgal.sh
           
-          # 构建依赖和项目
-          /bin/bash sh/cmake-deps.sh
+          # 构建主项目 (需要注意ARM64已经在fix-arch-mismatch.sh中构建了依赖)
+          if [[ $(uname -m) != "arm64" ]]; then
+            # 只在非ARM64环境中运行标准依赖构建
+            /bin/bash sh/cmake-deps.sh
+          fi
+          
+          # 再次运行CGAL处理
           ./process-cgal.sh
+          
+          # 构建主项目，使用任何设置的CMAKE_ARGS
           /bin/bash sh/cmake-build.sh
 
       # 测试
@@ -273,15 +294,22 @@ jobs:
       - name: Prepare output
         run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
-      # 代码签名
-      - name: Code signing
+      # 完整的代码签名过程
+      - name: Prepare for code signing
+        run: mkdir -p ./output && cp ./build/LunarMP ./output/LunarMP
+
+      # 导入证书
+      - name: Import code signing certificates
         uses: apple-actions/import-codesign-certs@v1
         with:
           p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
           p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
 
-      - name: Sign binary
-        run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
+      # 安全的签名步骤
+      - name: Sign the binary
+        run: |
+          # 使用双引号处理特殊字符
+          codesign -s "${{ secrets.CERTIFICATES_NAME }}" --force ./output/LunarMP
 
       # 打包
       - name: Zip output
