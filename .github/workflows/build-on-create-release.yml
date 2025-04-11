@@ -92,6 +92,10 @@ jobs:
           chmod +x fix-arm64-linking.sh
           ./fix-arm64-linking.sh
           
+          # 应用ARM64强制链接
+          chmod +x create-static-arm64-links.sh
+          ./create-static-arm64-links.sh
+          
           # 处理CGAL
           chmod +x process-cgal.sh
           ./process-cgal.sh
@@ -285,6 +289,10 @@ jobs:
           # 应用ARM64链接修复
           chmod +x fix-arm64-linking.sh
           ./fix-arm64-linking.sh
+          
+          # 应用ARM64强制链接
+          chmod +x create-static-arm64-links.sh
+          ./create-static-arm64-links.sh
           
           # 处理CGAL
           chmod +x process-cgal.sh

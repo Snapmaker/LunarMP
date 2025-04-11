@@ -38,12 +38,15 @@ if [[ $(uname -m) == "arm64" ]]; then
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
     -DCMAKE_FIND_ROOT_PATH="$DEPS_INSTALL_PREFIX" \
     -DCMAKE_IGNORE_PATH="/usr/local/lib;/usr/lib" \
+    -DCMAKE_FIND_FRAMEWORK=NEVER \
+    -DCMAKE_LIBRARY_PATH="$PWD/arm64-libs" \
     -DCMAKE_PREFIX_PATH="$DEPS_INSTALL_PREFIX" \
     -DCGAL_DIR="/usr/local/lib/cmake/CGAL" \
     -DGMP_INCLUDE_DIR="$DEPS_INSTALL_PREFIX/include" \
-    -DGMP_LIBRARIES="$DEPS_INSTALL_PREFIX/lib/libgmp.a;$DEPS_INSTALL_PREFIX/lib/libgmpxx.a" \
+    -DGMP_LIBRARIES="$PWD/arm64-libs/libgmp.a;$PWD/arm64-libs/libgmpxx.a" \
     -DMPFR_INCLUDE_DIR="$DEPS_INSTALL_PREFIX/include" \
-    -DMPFR_LIBRARIES="$DEPS_INSTALL_PREFIX/lib/libmpfr.a" \
+    -DMPFR_LIBRARIES="$PWD/arm64-libs/libmpfr.a" \
+    -DCMAKE_EXE_LINKER_FLAGS="-Wl,-search_paths_first -L$PWD/arm64-libs" \
     -DCMAKE_CXX_FLAGS="-I$DEPS_INSTALL_PREFIX/include -L$DEPS_INSTALL_PREFIX/lib"
 else
   # 原有的构建命令
