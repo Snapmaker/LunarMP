@@ -7,7 +7,7 @@ on:
 #on: push
 
 jobs:
-  build-macos:
+  build-macos-intel:
     name: Build MacOS Packages (Intel)
     runs-on: macos-13
 
@@ -68,49 +68,30 @@ jobs:
           #endif // BOOST_NEXT_PRIOR_HPP_INCLUDED
           EOF
           
-          # 确保构建时包含兼容层
-          echo "CPPFLAGS=-I/tmp/boost_compat" >> $GITHUB_ENV
-          echo "BOOST_INCLUDEDIR=$(brew --prefix boost)/include" >> $GITHUB_ENV
-          echo "BOOST_LIBRARYDIR=$(brew --prefix boost)/lib" >> $GITHUB_ENV
-          echo "BOOST_VERSION=$(brew info --json boost | jq -r '.[0].versions.stable')" >> $GITHUB_ENV
+          echo "CPLUS_INCLUDE_PATH=/tmp/boost_compat:$CPLUS_INCLUDE_PATH" >> $GITHUB_ENV
 
       # 修复GMP下载链接
       - name: Fix GMP Download URL
         run: |
-          sed -i.bak 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
+          sed -i 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
           mkdir -p deps/download
           curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
-
+          
       # 构建项目
       - name: Build project
         run: |
-          # 架构特定处理
-          chmod +x fix-arch-mismatch.sh
-          ./fix-arch-mismatch.sh
-          
-          # 应用ARM64链接修复
-          chmod +x fix-arm64-linking.sh
-          ./fix-arm64-linking.sh
-          
-          # 应用ARM64强制链接
-          chmod +x create-static-arm64-links.sh
-          ./create-static-arm64-links.sh
-          
-          # 处理CGAL
+          # 创建并应用全局兼容层
           chmod +x process-cgal.sh
           ./process-cgal.sh
           
-          # 构建主项目 (需要注意ARM64已经在fix-arch-mismatch.sh中构建了依赖)
-          if [[ $(uname -m) != "arm64" ]]; then
-            # 只在非ARM64环境中运行标准依赖构建
-            /bin/bash sh/cmake-deps.sh
-          fi
+          # 正常构建流程
+          /bin/bash sh/cmake-deps.sh
           
-          # 再次运行CGAL处理
+          # 再次运行处理脚本，确保deps安装后的CGAL文件也被处理
           ./process-cgal.sh
           
-          # 构建主项目，使用任何设置的CMAKE_ARGS
-          /bin/bash sh/cmake-build.sh
+          # 使用处理后的环境变量构建
+          source compile_env.sh && /bin/bash sh/cmake-build.sh
 
       # 测试
       - name: Test
@@ -120,37 +101,12 @@ jobs:
       - name: Prepare output
         run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
-      # 完整的代码签名过程
-      - name: Prepare for code signing
-        run: mkdir -p ./output && cp ./build/LunarMP ./output/LunarMP
-
-      # 导入证书
-      - name: Import code signing certificates
-        uses: apple-actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
-          p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
-
-      # 安全的签名步骤
-      - name: Sign the binary
-        run: |
-          # 检查证书环境变量是否存在
-          if [ -n "${{ secrets.CERTIFICATES_NAME }}" ]; then
-            # 使用引号确保特殊字符被正确处理
-            CERT_NAME="${{ secrets.CERTIFICATES_NAME }}"
-            echo "使用导入的证书进行签名..."
-            codesign -s "$CERT_NAME" --force ./output/LunarMP
-          else
-            echo "证书不可用，跳过签名"
-            chmod +x ./output/LunarMP
-          fi
-
       # 打包
       - name: Zip output
         uses: thedoctor0/zip-release@master
         with:
           type: zip
-          filename: LunarMP-mac.zip
+          filename: LunarMP-macos-intel.zip
           directory: ./
           path: ./output
 
@@ -160,51 +116,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: LunarMP-mac.zip
-
-      # 在macOS构建中添加这个直接修复步骤
-      - name: Direct fix for boost::prior error
-        run: |
-          # 创建兼容层
-          chmod +x create-compat-layer.sh
-          ./create-compat-layer.sh
-          
-          # 等待deps目录生成后直接修复问题文件
-          while [ ! -f ./deps/build/install/usr/local/include/CGAL/Intersections_3/internal/Plane_3_Triangle_3_intersection.h ]; do
-            echo "等待CGAL文件生成..."
-            sleep 5
-          done
-          
-          echo "修复问题文件..."
-          PROBLEM_FILE="./deps/build/install/usr/local/include/CGAL/Intersections_3/internal/Plane_3_Triangle_3_intersection.h"
-          
-          # 在文件开头添加我们的兼容层
-          sed -i.bak '1s/^/#include <boost\/next_prior.hpp>\n/' "$PROBLEM_FILE"
-          
-          # 确保项目能找到兼容层
-          echo "CPPFLAGS=-I$(pwd)/boost_compat" >> $GITHUB_ENV
-
-      # 代码签名修复
-      - name: Code signing step
-        run: |
-          # 确保输出目录存在
-          mkdir -p ./output
-          cp ./build/LunarMP ./output/LunarMP
-          
-          # 使用转义和引号保护证书名称
-          if [ -n "${{ secrets.MACOS_CERTIFICATE_NAME }}" ]; then
-            # 使用环境变量中的证书名称
-            codesign -s "${{ secrets.MACOS_CERTIFICATE_NAME }}" ./output/LunarMP
-          else
-            # 如果没有配置证书，跳过签名
-            echo "没有配置代码签名证书，跳过签名步骤"
-            # 确认文件存在和可执行
-            chmod +x ./output/LunarMP
-          fi
+          files: LunarMP-macos-intel.zip
 
   build-macos-arm64:
-    name: Build MacOS Packages (Apple Silicon)
-    runs-on: macos-14
+    name: Build MacOS Packages (ARM64)
+    runs-on: macos-14  # 使用macOS 14，支持ARM64架构
 
     steps:
       - name: Checkout Code
@@ -218,169 +134,98 @@ jobs:
           git submodule init
           git submodule update
 
-      # 专门为 ARM64 安装依赖
-      - name: Install ARM64 dependencies
+      # 安装特定版本组合
+      - name: Install compatible CGAL and Boost
         run: |
-          # 安装最新版本的依赖
-          brew install mpfr eigen boost cgal
+          # 安装CGAL和Boost
+          brew install cgal boost
+
+      # 安装其他依赖
+      - name: Install dependencies
+        run: |
+          brew install mpfr eigen
           
-          # 确保为 ARM64 构建
-          echo "ARCH=$(uname -m)" >> $GITHUB_ENV
+          # 创建兼容层以处理任何剩余的兼容性问题
+          mkdir -p /tmp/boost_compat/boost
+          cat > /tmp/boost_compat/boost/next_prior.hpp << 'EOF'
+          #ifndef BOOST_NEXT_PRIOR_HPP_INCLUDED
+          #define BOOST_NEXT_PRIOR_HPP_INCLUDED
           
-          # 创建构建环境变量
-          echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> $GITHUB_ENV
-          echo "CFLAGS=-arch arm64" >> $GITHUB_ENV
-          echo "CXXFLAGS=-arch arm64" >> $GITHUB_ENV
-          echo "LDFLAGS=-arch arm64" >> $GITHUB_ENV
+          #include <iterator>
           
-          # 如果存在 x86_64 的库，确保我们使用的是 arm64 版本
-          for lib in /usr/local/lib/libgmp* /usr/local/lib/libmpfr*; do
-            if [ -f "$lib" ]; then
-              file "$lib" | grep -q "x86_64" && echo "警告: $lib 是 x86_64 架构"
-            fi
-          done
+          namespace boost {
+              template <class T>
+              inline T prior(T x) { return --x; }
           
-          # 创建一个脚本来从源码构建 GMP 和 MPFR（如果需要）
-          cat > build_arm64_libs.sh << 'EOF'
-          #!/bin/bash
-          set -e
+              template <class T, class Distance>
+              inline T prior(T x, Distance n) {
+                  std::advance(x, -n);
+                  return x;
+              }
           
-          WORK_DIR=$(mktemp -d)
-          cd $WORK_DIR
+              template <class T>
+              inline T next(T x) { return ++x; }
           
-          # 下载并构建 GMP
-          curl -L -o gmp.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2
-          tar xf gmp.tar.bz2
-          cd gmp-6.2.1
-          ./configure --prefix=/tmp/arm64_libs --enable-cxx --with-pic --build=arm64-apple-darwin CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64"
-          make -j$(sysctl -n hw.ncpu)
-          make install
-          cd ..
+              template <class T, class Distance>
+              inline T next(T x, Distance n) {
+                  std::advance(x, n);
+                  return x;
+              }
+          }
           
-          # 下载并构建 MPFR
-          curl -L -o mpfr.tar.bz2 https://ftp.gnu.org/gnu/mpfr/mpfr-4.1.0.tar.bz2
-          tar xf mpfr.tar.bz2
-          cd mpfr-4.1.0
-          ./configure --prefix=/tmp/arm64_libs --with-gmp=/tmp/arm64_libs --with-pic --build=arm64-apple-darwin CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64"
-          make -j$(sysctl -n hw.ncpu)
-          make install
-          
-          echo "ARM64 库已构建完成，安装在 /tmp/arm64_libs"
+          #endif // BOOST_NEXT_PRIOR_HPP_INCLUDED
           EOF
           
-          chmod +x build_arm64_libs.sh
-          
-          # 检查是否有架构不匹配的情况
-          if brew list --versions gmp | grep -q '.' && file /usr/local/opt/gmp/lib/libgmp.a | grep -q "x86_64"; then
-            echo "检测到 x86_64 的 GMP 库，需要重新编译 ARM64 版本"
-            ./build_arm64_libs.sh
-            echo "ARM64_LIBS_DIR=/tmp/arm64_libs" >> $GITHUB_ENV
-          fi
+          echo "CPLUS_INCLUDE_PATH=/tmp/boost_compat:$CPLUS_INCLUDE_PATH" >> $GITHUB_ENV
 
       # 修复GMP下载链接
       - name: Fix GMP Download URL
         run: |
-          sed -i.bak 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
+          sed -i 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
           mkdir -p deps/download
           curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
-
-      # 创建一个专门为 ARM64 构建项目的脚本
-      - name: Create ARM64 build script
+          
+      # 创建修复ARM64架构的脚本
+      - name: Create ARM64 fix script
         run: |
-          cat > build_arm64.sh << 'EOF'
+          cat > fix-arm64-build.sh << 'EOF'
           #!/bin/bash
-          set -e
+          # 修改CMake构建脚本，使其正确处理ARM64架构
           
-          # 先清理可能存在的之前的构建
-          rm -rf build
-          mkdir -p build
+          # 设置正确的安装路径，避免权限问题
+          mkdir -p $HOME/.local/arm64-libs
           
-          # 创建本地目录存放 ARM64 库文件
-          mkdir -p arm64-libs
+          # 修改安装配置，改为用户目录下的路径
+          sed -i.bak 's|/var/folders/qn/arm64-libs|'$HOME'/.local/arm64-libs|g' sh/cmake-deps.sh
           
-          # 设置编译环境变量
-          export MACOSX_DEPLOYMENT_TARGET=12.0
-          export CFLAGS="-arch arm64"
-          export CXXFLAGS="-arch arm64"
-          export LDFLAGS="-arch arm64"
+          # 确保GMP配置正确识别ARM64架构
+          echo 'export CFLAGS="-arch arm64"' >> compile_env.sh
+          echo 'export CXXFLAGS="-arch arm64"' >> compile_env.sh
+          echo 'export LDFLAGS="-arch arm64"' >> compile_env.sh
           
-          # 如果我们自己构建了 ARM64 库，使用它们
-          if [ -d "/tmp/arm64_libs" ]; then
-             # 复制库文件到项目目录下的 arm64-libs
-             cp -a /tmp/arm64_libs/lib/* arm64-libs/
-             
-             # 设置环境变量指向本地库路径
-             export CMAKE_PREFIX_PATH="$(pwd)/arm64-libs:$CMAKE_PREFIX_PATH"
-             export CPPFLAGS="-I/tmp/arm64_libs/include $CPPFLAGS"
-             export LDFLAGS="-L$(pwd)/arm64-libs $LDFLAGS"
-          fi
-          
-          # 手动编译 GMP 和 MPFR 为 ARM64，确保文件在 arm64-libs 目录下
-          if [ ! -f "arm64-libs/libgmp.a" ] || [ ! -f "arm64-libs/libmpfr.a" ]; then
-              echo "正在为 ARM64 构建 GMP 和 MPFR 库..."
-              
-              # 创建工作目录
-              WORK_DIR=$(mktemp -d)
-              cd $WORK_DIR
-              
-              # 下载并构建 GMP
-              curl -L -o gmp.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2
-              tar xf gmp.tar.bz2
-              cd gmp-6.2.1
-              
-              # 配置 GMP 并指定安装路径到项目的 arm64-libs 目录
-              PROJECT_DIR=$(cd ../../../../ && pwd)
-              ./configure --prefix=$PROJECT_DIR/arm64-libs --enable-cxx --with-pic --build=arm64-apple-darwin CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64"
-              make -j$(sysctl -n hw.ncpu)
-              make install
-              cd ..
-              
-              # 下载并构建 MPFR
-              curl -L -o mpfr.tar.bz2 https://ftp.gnu.org/gnu/mpfr/mpfr-4.1.0.tar.bz2
-              tar xf mpfr.tar.bz2
-              cd mpfr-4.1.0
-              
-              # 配置 MPFR 并指定安装路径到项目的 arm64-libs 目录
-              ./configure --prefix=$PROJECT_DIR/arm64-libs --with-gmp=$PROJECT_DIR/arm64-libs --with-pic --build=arm64-apple-darwin CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64"
-              make -j$(sysctl -n hw.ncpu)
-              make install
-              
-              # 返回到项目目录
-              cd $PROJECT_DIR
-              
-              echo "ARM64 库已构建并安装到 $(pwd)/arm64-libs"
-          fi
-          
-          # 修改 CMakeLists.txt 添加 ARM64 库路径
-          if [ -f "CMakeLists.txt" ]; then
-              sed -i.bak '/find_package(MPFR REQUIRED)/i\
-                  # 设置 ARM64 库路径\
-                  link_directories(${CMAKE_CURRENT_SOURCE_DIR}/arm64-libs)\
-                  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/arm64-libs/include)' CMakeLists.txt
-          fi
-          
-          # 从源码重新构建依赖
-          bash sh/cmake-deps.sh
-          
-          # 修复任何已知的 CGAL 问题
-          if [ -f "./process-cgal.sh" ]; then
-            bash ./process-cgal.sh
-          fi
-          
-          # 构建主项目
-          # 为 CMake 指定额外的库路径
-          export CMAKE_LIBRARY_PATH="$(pwd)/arm64-libs:$CMAKE_LIBRARY_PATH"
-          export CMAKE_INCLUDE_PATH="$(pwd)/arm64-libs/include:$CMAKE_INCLUDE_PATH"
-          
-          bash sh/cmake-build.sh
+          # 导出库路径到环境变量
+          echo 'export LD_LIBRARY_PATH="$HOME/.local/arm64-libs/lib:$LD_LIBRARY_PATH"' >> compile_env.sh
+          echo 'export DYLD_LIBRARY_PATH="$HOME/.local/arm64-libs/lib:$DYLD_LIBRARY_PATH"' >> compile_env.sh
           EOF
           
-          chmod +x build_arm64.sh
-
+          chmod +x fix-arm64-build.sh
+          ./fix-arm64-build.sh
+      
       # 构建项目
-      - name: Build project for ARM64
+      - name: Build project
         run: |
-          ./build_arm64.sh
+          # 创建并应用全局兼容层
+          chmod +x process-cgal.sh
+          ./process-cgal.sh
+          
+          # 正常构建流程
+          /bin/bash sh/cmake-deps.sh
+          
+          # 再次运行处理脚本，确保deps安装后的CGAL文件也被处理
+          ./process-cgal.sh
+          
+          # 使用处理后的环境变量构建
+          source compile_env.sh && /bin/bash sh/cmake-build.sh
 
       # 测试
       - name: Test
@@ -390,33 +235,12 @@ jobs:
       - name: Prepare output
         run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
-      # 导入证书
-      - name: Import code signing certificates
-        uses: apple-actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
-          p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
-
-      # 安全的签名步骤
-      - name: Sign the binary
-        run: |
-          # 检查证书环境变量是否存在
-          if [ -n "${{ secrets.CERTIFICATES_NAME }}" ]; then
-            # 使用引号确保特殊字符被正确处理
-            CERT_NAME="${{ secrets.CERTIFICATES_NAME }}"
-            echo "使用导入的证书进行签名..."
-            codesign -s "$CERT_NAME" --force ./output/LunarMP
-          else
-            echo "证书不可用，跳过签名"
-            chmod +x ./output/LunarMP
-          fi
-
       # 打包
       - name: Zip output
         uses: thedoctor0/zip-release@master
         with:
           type: zip
-          filename: LunarMP-mac-arm64.zip
+          filename: LunarMP-macos-arm64.zip
           directory: ./
           path: ./output
 
@@ -426,7 +250,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: LunarMP-mac-arm64.zip
+          files: LunarMP-macos-arm64.zip
 
   build-windows:
     name: Build Windows packages
