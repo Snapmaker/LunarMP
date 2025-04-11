@@ -179,7 +179,7 @@ jobs:
     needs: [build-boost]  # 添加依赖
     name: Build MacOS Packages (ARM64)
 
-    runs-on: macos-latest
+    runs-on: macos-13  # 使用macos-13而不是macos-latest
 
     steps:
       - name: Checkout Code
@@ -195,9 +195,11 @@ jobs:
           git submodule update
 
       # 安装当前可用的最新版本Boost
-      - name: Install Boost
+      - name: Install Boost 1.71
         run: |
-          brew install boost
+          # 尝试安装Boost 1.71，这个版本与CGAL兼容性好
+          brew install boost@1.71 || brew install boost@1.72 || brew install boost@1.76 || brew install boost
+          
           # 创建兼容层
           mkdir -p /tmp/boost_compat/boost
           cat > /tmp/boost_compat/boost/next_prior.hpp << 'EOF'
