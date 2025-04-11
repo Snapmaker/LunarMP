@@ -2,8 +2,13 @@
 // Created by Cyril on 2022/4/8.
 //
 
-#ifndef LUNARMP_MODELBASE_H
-#define LUNARMP_MODELBASE_H
+#ifndef LUNAR_MP_MODEL_BASE_H
+#define LUNAR_MP_MODEL_BASE_H
+
+// 先包含我们的修复头文件
+#include "../utils/BoostCompat.h"
+
+// 然后包含CGAL
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_mesh.h>
 #include <CGAL/Timer.h>
@@ -12,7 +17,6 @@
 
 #include "../utils/logoutput.h"
 #include "../utils/Enums.h"
-#include "../utils/BoostCompat.h"
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel                 K;
 typedef K::Point_3                                                          Point_3;
@@ -80,4 +84,4 @@ struct Put_true {
     PM pm;
 };
 }
-#endif // LUNARMP__MODELBASE_H
+#endif // LUNAR_MP_MODEL_BASE_H

@@ -54,18 +54,16 @@ target_link_libraries(_LunarMP PUBLIC CGAL::CGAL)
 
 target_include_directories(_LunarMP PUBLIC src/rapidjson)
 
-# 添加定义以禁用CGAL中的某些依赖boost的功能
-add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=ON)
-
 # 添加兼容性相关定义
 add_definitions(-DBOOST_ALLOW_DEPRECATED_HEADERS)
 add_definitions(-DBOOST_PENDING_INTEGER_LOG2_HPP)
+add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=ON)
 
 # 添加包含路径，确保我们的兼容性头文件优先级高于CGAL
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-# 添加boost::prior替换为std::prev的兼容性定义
-add_definitions(-Dboost::prior=std::prev)
+# 删除有问题的宏定义
+# add_definitions(-Dboost::prior=std::prev)
 
 add_executable(LunarMP src/lunarmp/main.cpp)
 

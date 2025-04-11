@@ -22,60 +22,63 @@ fi
 
 echo "CGAL目录: $CGAL_DIR"
 
-# 创建兼容性头文件
-mkdir -p "${CGAL_DIR}/boost/compat"
-cat > "${CGAL_DIR}/boost/compat/prior_next.hpp" << EOF
-#ifndef CGAL_BOOST_COMPAT_PRIOR_NEXT_HPP
-#define CGAL_BOOST_COMPAT_PRIOR_NEXT_HPP
+# 创建临时的兼容性头文件
+COMPAT_DIR="${CGAL_DIR}/patches"
+mkdir -p "$COMPAT_DIR"
+
+cat > "${COMPAT_DIR}/boost_prior.h" << EOF
+// 自动生成的兼容性头文件
+#ifndef CGAL_BOOST_PRIOR_COMPAT_H
+#define CGAL_BOOST_PRIOR_COMPAT_H
 
 #include <iterator>
 
+// 强制定义boost::prior
+#ifndef BOOST_PRIOR_DEFINED
+#define BOOST_PRIOR_DEFINED
 namespace boost {
   template <typename Iterator>
-  Iterator prior(Iterator it) { return std::prev(it); }
+  Iterator prior(Iterator it) { 
+    return std::prev(it); 
+  }
   
   template <typename Iterator, typename Distance>
-  Iterator prior(Iterator it, Distance n) { return std::prev(it, n); }
-  
-  template <typename Iterator>
-  Iterator next(Iterator it) { return std::next(it); }
-  
-  template <typename Iterator, typename Distance>
-  Iterator next(Iterator it, Distance n) { return std::next(it, n); }
+  Iterator prior(Iterator it, Distance n) { 
+    return std::prev(it, n); 
+  }
 }
+#endif // BOOST_PRIOR_DEFINED
 
-#endif // CGAL_BOOST_COMPAT_PRIOR_NEXT_HPP
+#endif // CGAL_BOOST_PRIOR_COMPAT_H
 EOF
 
-# 修补指定的文件
-PROBLEM_FILE="${CGAL_DIR}/Intersections_3/internal/Plane_3_Triangle_3_intersection.h"
+# 查找问题文件并修补
+echo "正在搜索包含boost::prior的文件..."
+FILES_WITH_PRIOR=$(grep -r "boost::prior" "$CGAL_DIR" --include="*.h" --include="*.hpp" | cut -d: -f1 | sort | uniq)
 
-if [ -f "$PROBLEM_FILE" ]; then
-  echo "修补文件: $PROBLEM_FILE"
-  # 确保备份
-  cp "$PROBLEM_FILE" "$PROBLEM_FILE.bak"
+for file in $FILES_WITH_PRIOR; do
+  echo "修补文件: $file"
   
-  # 在文件开头添加我们的兼容性头文件
-  sed -i.bak '1s/^/#include <CGAL\/boost\/compat\/prior_next.hpp>\n/' "$PROBLEM_FILE"
+  # 备份原文件
+  cp "$file" "$file.bak"
   
-  # 替换所有的boost::prior调用为std::prev
-  sed -i.bak2 's/boost::prior/std::prev/g' "$PROBLEM_FILE"
+  # 在文件开头添加我们的兼容头文件
+  sed -i.sedtmp "1i\\
+#include \"${COMPAT_DIR}/boost_prior.h\"
+" "$file"
   
-  echo "已成功修补 $PROBLEM_FILE"
-else
-  echo "警告: 无法找到问题文件 $PROBLEM_FILE"
+  # 如果失败，使用直接替换
+  sed -i.sedtmp2 's/boost::prior/std::prev/g' "$file"
   
-  # 尝试找到所有包含boost::prior的文件
-  echo "正在搜索所有包含boost::prior的CGAL文件进行修补..."
-  PRIOR_FILES=$(grep -r "boost::prior" "$CGAL_DIR" --include="*.h" --include="*.hpp" | cut -d':' -f1 | sort | uniq)
-  
-  for file in $PRIOR_FILES; do
-    if [ -f "$file" ]; then
-      echo "修补文件: $file"
-      cp "$file" "$file.bak"
-      sed -i.bak 's/boost::prior/std::prev/g' "$file"
-    fi
-  done
+  echo "已修补: $file"
+done
+
+# 特别处理已知的问题文件
+KNOWN_PROBLEM="${CGAL_DIR}/Intersections_3/internal/Plane_3_Triangle_3_intersection.h"
+if [ -f "$KNOWN_PROBLEM" ]; then
+  echo "修补已知问题文件: $KNOWN_PROBLEM"
+  cp "$KNOWN_PROBLEM" "$KNOWN_PROBLEM.bak"
+  sed -i.sedknown 's/boost::prior/std::prev/g' "$KNOWN_PROBLEM"
 fi
 
 echo "补丁应用完成" 
