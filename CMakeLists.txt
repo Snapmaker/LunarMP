@@ -57,6 +57,10 @@ target_include_directories(_LunarMP PUBLIC src/rapidjson)
 # 添加包含路径，确保我们的兼容性头文件优先级高于CGAL
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# 添加兼容性相关定义
+add_definitions(-DBOOST_ALLOW_DEPRECATED_HEADERS)
+add_definitions(-DBOOST_PENDING_INTEGER_LOG2_HPP)
+
 add_executable(LunarMP src/lunarmp/main.cpp)
 
 target_link_libraries(LunarMP _LunarMP)
