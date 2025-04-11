@@ -48,7 +48,7 @@ find_package(CGAL REQUIRED)
 target_include_directories(_LunarMP PUBLIC ${CGAL_INCLUDE_DIRS})
 
 # Boost and its components
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS graph)
 
 target_link_libraries(_LunarMP PUBLIC CGAL::CGAL)
 
