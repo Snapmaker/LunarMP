@@ -84,23 +84,18 @@ jobs:
       # 构建项目
       - name: Build project
         run: |
+          # 创建并应用全局兼容层
+          chmod +x process-cgal.sh
+          ./process-cgal.sh
+          
+          # 正常构建流程
           /bin/bash sh/cmake-deps.sh
           
-          # 应用直接修复
-          chmod +x create-compat-layer.sh
-          ./create-compat-layer.sh
+          # 再次运行处理脚本，确保deps安装后的CGAL文件也被处理
+          ./process-cgal.sh
           
-          # 直接修复已知问题文件
-          PROBLEM_FILE="./deps/build/install/usr/local/include/CGAL/Intersections_3/internal/Plane_3_Triangle_3_intersection.h"
-          if [ -f "$PROBLEM_FILE" ]; then
-            echo "修复已知问题文件..."
-            sed -i.bak '1s/^/#include <boost\/next_prior.hpp>\n/' "$PROBLEM_FILE"
-            # 备用方案：直接替换boost::prior为std::prev
-            sed -i.bak2 's/boost::prior/std::prev/g' "$PROBLEM_FILE"
-          fi
-          
-          # 使用修改后的环境变量构建
-          CPPFLAGS="-I$(pwd)/boost_compat" /bin/bash sh/cmake-build.sh
+          # 使用处理后的环境变量构建
+          source compile_env.sh && /bin/bash sh/cmake-build.sh
 
       # 测试
       - name: Test
@@ -239,8 +234,18 @@ jobs:
       # 构建项目
       - name: Build project
         run: |
+          # 创建并应用全局兼容层
+          chmod +x process-cgal.sh
+          ./process-cgal.sh
+          
+          # 正常构建流程
           /bin/bash sh/cmake-deps.sh
-          /bin/bash sh/cmake-build.sh
+          
+          # 再次运行处理脚本，确保deps安装后的CGAL文件也被处理
+          ./process-cgal.sh
+          
+          # 使用处理后的环境变量构建
+          source compile_env.sh && /bin/bash sh/cmake-build.sh
 
       # 测试
       - name: Test
@@ -400,8 +405,18 @@ jobs:
       # 构建项目
       - name: Build project
         run: |
+          # 创建并应用全局兼容层
+          chmod +x process-cgal.sh
+          ./process-cgal.sh
+          
+          # 正常构建流程
           /bin/bash sh/cmake-deps.sh
-          /bin/bash sh/cmake-build.sh
+          
+          # 再次运行处理脚本，确保deps安装后的CGAL文件也被处理
+          ./process-cgal.sh
+          
+          # 使用处理后的环境变量构建
+          source compile_env.sh && /bin/bash sh/cmake-build.sh
 
       # 测试
       - name: Test
