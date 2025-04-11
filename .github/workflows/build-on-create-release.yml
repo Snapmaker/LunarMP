@@ -88,6 +88,10 @@ jobs:
           chmod +x fix-arch-mismatch.sh
           ./fix-arch-mismatch.sh
           
+          # 应用ARM64链接修复
+          chmod +x fix-arm64-linking.sh
+          ./fix-arm64-linking.sh
+          
           # 处理CGAL
           chmod +x process-cgal.sh
           ./process-cgal.sh
@@ -126,8 +130,16 @@ jobs:
       # 安全的签名步骤
       - name: Sign the binary
         run: |
-          # 使用双引号处理特殊字符
-          codesign -s "${{ secrets.CERTIFICATES_NAME }}" --force ./output/LunarMP
+          # 检查证书环境变量是否存在
+          if [ -n "${{ secrets.CERTIFICATES_NAME }}" ]; then
+            # 使用引号确保特殊字符被正确处理
+            CERT_NAME="${{ secrets.CERTIFICATES_NAME }}"
+            echo "使用导入的证书进行签名..."
+            codesign -s "$CERT_NAME" --force ./output/LunarMP
+          else
+            echo "证书不可用，跳过签名"
+            chmod +x ./output/LunarMP
+          fi
 
       # 打包
       - name: Zip output
@@ -270,6 +282,10 @@ jobs:
           chmod +x fix-arch-mismatch.sh
           ./fix-arch-mismatch.sh
           
+          # 应用ARM64链接修复
+          chmod +x fix-arm64-linking.sh
+          ./fix-arm64-linking.sh
+          
           # 处理CGAL
           chmod +x process-cgal.sh
           ./process-cgal.sh
@@ -308,8 +324,16 @@ jobs:
       # 安全的签名步骤
       - name: Sign the binary
         run: |
-          # 使用双引号处理特殊字符
-          codesign -s "${{ secrets.CERTIFICATES_NAME }}" --force ./output/LunarMP
+          # 检查证书环境变量是否存在
+          if [ -n "${{ secrets.CERTIFICATES_NAME }}" ]; then
+            # 使用引号确保特殊字符被正确处理
+            CERT_NAME="${{ secrets.CERTIFICATES_NAME }}"
+            echo "使用导入的证书进行签名..."
+            codesign -s "$CERT_NAME" --force ./output/LunarMP
+          else
+            echo "证书不可用，跳过签名"
+            chmod +x ./output/LunarMP
+          fi
 
       # 打包
       - name: Zip output

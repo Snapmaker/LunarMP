@@ -33,15 +33,18 @@ if [[ $(uname -m) == "arm64" ]]; then
   # 确保使用正确路径的依赖
   DEPS_INSTALL_PREFIX="$PWD/deps/build/install/usr/local"
   
-  # 设置ARM64特定的CMake参数
+  # 设置ARM64特定的CMake参数，明确指定要使用的库文件和包含目录
   cmake -S . -B build \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
+    -DCMAKE_FIND_ROOT_PATH="$DEPS_INSTALL_PREFIX" \
+    -DCMAKE_IGNORE_PATH="/usr/local/lib;/usr/lib" \
     -DCMAKE_PREFIX_PATH="$DEPS_INSTALL_PREFIX" \
     -DCGAL_DIR="/usr/local/lib/cmake/CGAL" \
     -DGMP_INCLUDE_DIR="$DEPS_INSTALL_PREFIX/include" \
-    -DGMP_LIBRARIES="$DEPS_INSTALL_PREFIX/lib/libgmp.a" \
+    -DGMP_LIBRARIES="$DEPS_INSTALL_PREFIX/lib/libgmp.a;$DEPS_INSTALL_PREFIX/lib/libgmpxx.a" \
     -DMPFR_INCLUDE_DIR="$DEPS_INSTALL_PREFIX/include" \
-    -DMPFR_LIBRARIES="$DEPS_INSTALL_PREFIX/lib/libmpfr.a"
+    -DMPFR_LIBRARIES="$DEPS_INSTALL_PREFIX/lib/libmpfr.a" \
+    -DCMAKE_CXX_FLAGS="-I$DEPS_INSTALL_PREFIX/include -L$DEPS_INSTALL_PREFIX/lib"
 else
   # 原有的构建命令
   cmake -S . -B build

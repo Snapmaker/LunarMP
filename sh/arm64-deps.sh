@@ -50,4 +50,31 @@ cd mpfr-4.1.0
 make -j$(sysctl -n hw.ncpu)
 make install
 
+# 添加GMP C++接口的编译
+cd "$BUILD_DIR/gmp-6.2.1"
+echo "编译GMP C++接口（ARM64版本）..."
+make -j$(sysctl -n hw.ncpu) CXX=c++
+cp .libs/libgmpxx.a "$INSTALL_PREFIX/lib/"
+cp -r c++ "$INSTALL_PREFIX/include/gmpxx"
+
+# 创建特定的arm64配置文件，以确保CMake使用正确的库
+cat > "$INSTALL_PREFIX/lib/cmake/gmp-arm64-config.cmake" << EOF
+# GMP ARM64配置文件
+set(GMP_INCLUDE_DIRS "${INSTALL_PREFIX}/include")
+set(GMP_LIBRARIES "${INSTALL_PREFIX}/lib/libgmp.a")
+set(GMPXX_LIBRARIES "${INSTALL_PREFIX}/lib/libgmpxx.a")
+set(GMP_FOUND TRUE)
+EOF
+
+# 创建一个符号链接，确保CMake能找到我们的ARM64库
+mkdir -p "$INSTALL_PREFIX/lib/cmake/gmp"
+ln -sf "$INSTALL_PREFIX/lib/cmake/gmp-arm64-config.cmake" "$INSTALL_PREFIX/lib/cmake/gmp/gmp-config.cmake"
+
+# 显示构建的库信息
+echo "GMP库信息："
+file "$INSTALL_PREFIX/lib/libgmp.a"
+file "$INSTALL_PREFIX/lib/libgmpxx.a"
+echo "MPFR库信息："
+file "$INSTALL_PREFIX/lib/libmpfr.a"
+
 echo "===== ARM64专用依赖构建完成 =====" 
