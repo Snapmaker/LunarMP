@@ -67,6 +67,9 @@ add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=ON)
 # 确保我们的兼容性头文件优先级高于CGAL
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# 确保兼容层优先被包含
+include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/boost_compat")
+
 # 删除有问题的宏定义
 # add_definitions(-Dboost::prior=std::prev)
 

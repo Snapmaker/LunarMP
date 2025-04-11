@@ -23,10 +23,19 @@ jobs:
           git submodule init
           git submodule update
 
+      # 安装特定版本组合
+      - name: Install compatible CGAL and Boost
+        run: |
+          # 安装CGAL 5.5与Boost 1.83的组合
+          brew install cgal@5.5 boost@1.83 || brew install cgal boost
+          
+          # 或者更简单地安装最新版本
+          # brew install cgal boost
+
       # 安装最新版本的Boost、CGAL和其他依赖
       - name: Install dependencies
         run: |
-          brew install boost cgal mpfr eigen
+          brew install mpfr eigen
           
           # 创建兼容层以处理任何剩余的兼容性问题
           mkdir -p /tmp/boost_compat/boost
@@ -129,10 +138,19 @@ jobs:
           git submodule init
           git submodule update
 
+      # 安装特定版本组合
+      - name: Install compatible CGAL and Boost
+        run: |
+          # 安装CGAL 5.5与Boost 1.83的组合
+          brew install cgal@5.5 boost@1.83 || brew install cgal boost
+          
+          # 或者更简单地安装最新版本
+          # brew install cgal boost
+
       # 安装最新版本的Boost、CGAL和其他依赖
       - name: Install dependencies
         run: |
-          brew install boost cgal mpfr eigen
+          brew install mpfr eigen
           
           # 创建兼容层以处理任何剩余的兼容性问题
           mkdir -p /tmp/boost_compat/boost

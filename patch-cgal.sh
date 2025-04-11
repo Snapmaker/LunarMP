@@ -87,4 +87,66 @@ if [ -f "$PLANE_TRIANGLE_FILE" ]; then
     sed -i.bak 's/boost::prior/::boost::prior/g' "$PLANE_TRIANGLE_FILE"
 fi
 
-echo "补丁应用完成" 
+echo "补丁应用完成"
+
+# 尝试确定CGAL路径
+if [ -d "/usr/local/include/CGAL" ]; then
+    CGAL_DIR="/usr/local/include/CGAL"
+elif [ -d "/usr/include/CGAL" ]; then
+    CGAL_DIR="/usr/include/CGAL"
+elif [ -d "/opt/homebrew/include/CGAL" ]; then
+    CGAL_DIR="/opt/homebrew/include/CGAL"
+fi
+
+# 找不到时尝试通过brew查找
+if [ -z "$CGAL_DIR" ] && command -v brew >/dev/null; then
+    CGAL_PREFIX=$(brew --prefix cgal 2>/dev/null || echo "")
+    if [ -n "$CGAL_PREFIX" ]; then
+        CGAL_DIR="$CGAL_PREFIX/include/CGAL"
+    fi
+fi
+
+echo "使用CGAL目录: $CGAL_DIR"
+
+# 查找问题文件并修复
+if [ -f "$CGAL_DIR/Intersections_3/internal/Plane_3_Triangle_3_intersection.h" ]; then
+    # 创建补丁
+    mkdir -p "$CGAL_DIR/patches/"
+    cat > "$CGAL_DIR/patches/boost_prior.h" << 'EOF'
+    #ifndef CGAL_BOOST_PRIOR_PATCH_H
+    #define CGAL_BOOST_PRIOR_PATCH_H
+    
+    #include <iterator>
+    
+    namespace boost {
+        template <class T>
+        inline T prior(T x) { return --x; }
+    
+        template <class T, class Distance>
+        inline T prior(T x, Distance n) {
+            std::advance(x, -n);
+            return x;
+        }
+    
+        template <class T>
+        inline T next(T x) { return ++x; }
+    
+        template <class T, class Distance>
+        inline T next(T x, Distance n) {
+            std::advance(x, n);
+            return x;
+        }
+    }
+    
+    #endif // CGAL_BOOST_PRIOR_PATCH_H
+    EOF
+
+    # 直接修复问题文件
+    echo "修复问题文件: $CGAL_DIR/Intersections_3/internal/Plane_3_Triangle_3_intersection.h"
+    sed -i.bak 's/boost::prior(/::boost::prior(/g' "$CGAL_DIR/Intersections_3/internal/Plane_3_Triangle_3_intersection.h"
+    
+    # 添加include
+    if ! grep -q "boost_prior.h" "$CGAL_DIR/Intersections_3/internal/Plane_3_Triangle_3_intersection.h"; then
+        sed -i.bak '1s/^/#include <CGAL\/patches\/boost_prior.h>\n/' "$CGAL_DIR/Intersections_3/internal/Plane_3_Triangle_3_intersection.h"
+    fi
+fi 
