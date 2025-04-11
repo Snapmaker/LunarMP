@@ -295,6 +295,9 @@ jobs:
           rm -rf build
           mkdir -p build
           
+          # 创建本地目录存放 ARM64 库文件
+          mkdir -p arm64-libs
+          
           # 设置编译环境变量
           export MACOSX_DEPLOYMENT_TARGET=12.0
           export CFLAGS="-arch arm64"
@@ -303,9 +306,57 @@ jobs:
           
           # 如果我们自己构建了 ARM64 库，使用它们
           if [ -d "/tmp/arm64_libs" ]; then
-            export CMAKE_PREFIX_PATH="/tmp/arm64_libs:$CMAKE_PREFIX_PATH"
-            export CPPFLAGS="-I/tmp/arm64_libs/include $CPPFLAGS"
-            export LDFLAGS="-L/tmp/arm64_libs/lib $LDFLAGS"
+             # 复制库文件到项目目录下的 arm64-libs
+             cp -a /tmp/arm64_libs/lib/* arm64-libs/
+             
+             # 设置环境变量指向本地库路径
+             export CMAKE_PREFIX_PATH="$(pwd)/arm64-libs:$CMAKE_PREFIX_PATH"
+             export CPPFLAGS="-I/tmp/arm64_libs/include $CPPFLAGS"
+             export LDFLAGS="-L$(pwd)/arm64-libs $LDFLAGS"
+          fi
+          
+          # 手动编译 GMP 和 MPFR 为 ARM64，确保文件在 arm64-libs 目录下
+          if [ ! -f "arm64-libs/libgmp.a" ] || [ ! -f "arm64-libs/libmpfr.a" ]; then
+              echo "正在为 ARM64 构建 GMP 和 MPFR 库..."
+              
+              # 创建工作目录
+              WORK_DIR=$(mktemp -d)
+              cd $WORK_DIR
+              
+              # 下载并构建 GMP
+              curl -L -o gmp.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2
+              tar xf gmp.tar.bz2
+              cd gmp-6.2.1
+              
+              # 配置 GMP 并指定安装路径到项目的 arm64-libs 目录
+              PROJECT_DIR=$(cd ../../../../ && pwd)
+              ./configure --prefix=$PROJECT_DIR/arm64-libs --enable-cxx --with-pic --build=arm64-apple-darwin CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64"
+              make -j$(sysctl -n hw.ncpu)
+              make install
+              cd ..
+              
+              # 下载并构建 MPFR
+              curl -L -o mpfr.tar.bz2 https://ftp.gnu.org/gnu/mpfr/mpfr-4.1.0.tar.bz2
+              tar xf mpfr.tar.bz2
+              cd mpfr-4.1.0
+              
+              # 配置 MPFR 并指定安装路径到项目的 arm64-libs 目录
+              ./configure --prefix=$PROJECT_DIR/arm64-libs --with-gmp=$PROJECT_DIR/arm64-libs --with-pic --build=arm64-apple-darwin CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64"
+              make -j$(sysctl -n hw.ncpu)
+              make install
+              
+              # 返回到项目目录
+              cd $PROJECT_DIR
+              
+              echo "ARM64 库已构建并安装到 $(pwd)/arm64-libs"
+          fi
+          
+          # 修改 CMakeLists.txt 添加 ARM64 库路径
+          if [ -f "CMakeLists.txt" ]; then
+              sed -i.bak '/find_package(MPFR REQUIRED)/i\
+                  # 设置 ARM64 库路径\
+                  link_directories(${CMAKE_CURRENT_SOURCE_DIR}/arm64-libs)\
+                  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/arm64-libs/include)' CMakeLists.txt
           fi
           
           # 从源码重新构建依赖
@@ -317,6 +368,10 @@ jobs:
           fi
           
           # 构建主项目
+          # 为 CMake 指定额外的库路径
+          export CMAKE_LIBRARY_PATH="$(pwd)/arm64-libs:$CMAKE_LIBRARY_PATH"
+          export CMAKE_INCLUDE_PATH="$(pwd)/arm64-libs/include:$CMAKE_INCLUDE_PATH"
+          
           bash sh/cmake-build.sh
           EOF
           
