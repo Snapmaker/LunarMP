@@ -84,18 +84,25 @@ jobs:
       # 构建项目
       - name: Build project
         run: |
-          # 创建并应用全局兼容层
+          # 应用架构修复
+          chmod +x fix-arch-mismatch.sh
+          ./fix-arch-mismatch.sh
+          
+          # CGAL兼容性处理
           chmod +x process-cgal.sh
           ./process-cgal.sh
           
-          # 正常构建流程
+          # 构建过程
+          source compile_env.sh || true
+          CMAKE_EXTRA_ARGS=""
+          if [[ $(uname -m) == "arm64" ]]; then
+            CMAKE_EXTRA_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64"
+          fi
+          
+          # 使用ARM64特定参数进行构建
           /bin/bash sh/cmake-deps.sh
-          
-          # 再次运行处理脚本，确保deps安装后的CGAL文件也被处理
           ./process-cgal.sh
-          
-          # 使用处理后的环境变量构建
-          source compile_env.sh && /bin/bash sh/cmake-build.sh
+          CMAKE_ARGS="$CMAKE_EXTRA_ARGS" /bin/bash sh/cmake-build.sh
 
       # 测试
       - name: Test
@@ -234,18 +241,25 @@ jobs:
       # 构建项目
       - name: Build project
         run: |
-          # 创建并应用全局兼容层
+          # 应用架构修复
+          chmod +x fix-arch-mismatch.sh
+          ./fix-arch-mismatch.sh
+          
+          # CGAL兼容性处理
           chmod +x process-cgal.sh
           ./process-cgal.sh
           
-          # 正常构建流程
+          # 构建过程
+          source compile_env.sh || true
+          CMAKE_EXTRA_ARGS=""
+          if [[ $(uname -m) == "arm64" ]]; then
+            CMAKE_EXTRA_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64"
+          fi
+          
+          # 使用ARM64特定参数进行构建
           /bin/bash sh/cmake-deps.sh
-          
-          # 再次运行处理脚本，确保deps安装后的CGAL文件也被处理
           ./process-cgal.sh
-          
-          # 使用处理后的环境变量构建
-          source compile_env.sh && /bin/bash sh/cmake-build.sh
+          CMAKE_ARGS="$CMAKE_EXTRA_ARGS" /bin/bash sh/cmake-build.sh
 
       # 测试
       - name: Test
@@ -281,6 +295,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: LunarMP-mac-arm64.zip
+
+      # 在 MacOS ARM64 构建中添加架构修复步骤
+      - name: Comprehensive ARM64 Architecture Fix
+        run: |
+          chmod +x fix-arch-mismatch.sh
+          ./fix-arch-mismatch.sh
 
   build-windows:
     name: Build Windows packages
