@@ -22,13 +22,42 @@ fi
 
 cd ${DEPS_DIR} || exit
 
-# 使用更可靠的GMP下载URL并确保传递给CMake
+# 手动下载和安装GMP
 GMP_URL="https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2"
+GMP_FILE="gmp-6.2.1.tar.bz2"
+GMP_DIR="gmp-6.2.1"
+DOWNLOAD_DIR="${DEPS_DIR}/${BUILD_DIR}/down/GMP"
 
-# 创建或修改CMake缓存初始化文件，强制使用我们的URL
-cat > ${BUILD_DIR}/gmp_download_url.cmake << EOF
-set(GMP_URL "${GMP_URL}" CACHE STRING "URL for downloading GMP" FORCE)
-EOF
+# 创建下载目录
+mkdir -p "${DOWNLOAD_DIR}"
+
+if [ ! -f "${DOWNLOAD_DIR}/${GMP_FILE}" ]; then
+  echo "直接下载GMP..."
+  # 尝试多个下载地址
+  if ! curl -L ${GMP_URL} -o "${DOWNLOAD_DIR}/${GMP_FILE}"; then
+    echo "从GNU源下载失败，尝试备用源..."
+    # 备用下载地址
+    BACKUP_URL="https://mirrors.kernel.org/gnu/gmp/${GMP_FILE}"
+    if ! curl -L ${BACKUP_URL} -o "${DOWNLOAD_DIR}/${GMP_FILE}"; then
+      echo "GMP下载失败，请检查网络连接或手动下载"
+      exit 1
+    fi
+  fi
+fi
+
+# 如果下载成功，解压并准备源码
+if [ -f "${DOWNLOAD_DIR}/${GMP_FILE}" ]; then
+  echo "GMP下载成功，正在解压..."
+  # 创建源码目录
+  mkdir -p "${DOWNLOAD_DIR}/src"
+  tar -xjf "${DOWNLOAD_DIR}/${GMP_FILE}" -C "${DOWNLOAD_DIR}/src"
+  # 创建符号链接让CMake可以找到源码
+  if [ ! -L "${DOWNLOAD_DIR}/src/gmp" ]; then
+    ln -sf "${DOWNLOAD_DIR}/src/${GMP_DIR}" "${DOWNLOAD_DIR}/src/gmp"
+  fi
+  # 创建完成标记文件，告诉CMake下载已完成
+  touch "${DOWNLOAD_DIR}/download-gmp-prefix/src/download-gmp-stamp/download-gmp-download"
+fi
 
 # 下载并更新 RapidJSON 库
 if [ ! -d "${DEPS_DIR}/rapidjson" ]; then
@@ -46,8 +75,8 @@ else
   CMAKE_EXTRA_ARGS=""
 fi
 
-# 在CMAKE调用中使用-C选项加载我们的初始缓存文件
-${CMAKE_DIR} -C ${BUILD_DIR}/gmp_download_url.cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${CMAKE_EXTRA_ARGS} -G "${CodeBlocks}" -S ./ -B ${BUILD_DIR}
+# 运行CMake构建
+${CMAKE_DIR} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${CMAKE_EXTRA_ARGS} -G "${CodeBlocks}" -S ./ -B ${BUILD_DIR}
 ${CMAKE_DIR} --build ./${BUILD_DIR} --target ${INSTALL_TARGET} -- -j 4
 
 # 为CGAL添加兼容性补丁，解决boost::prior的问题
