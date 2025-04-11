@@ -161,6 +161,24 @@ jobs:
           # 确保项目能找到兼容层
           echo "CPPFLAGS=-I$(pwd)/boost_compat" >> $GITHUB_ENV
 
+      # 代码签名修复
+      - name: Code signing step
+        run: |
+          # 确保输出目录存在
+          mkdir -p ./output
+          cp ./build/LunarMP ./output/LunarMP
+          
+          # 使用转义和引号保护证书名称
+          if [ -n "${{ secrets.MACOS_CERTIFICATE_NAME }}" ]; then
+            # 使用环境变量中的证书名称
+            codesign -s "${{ secrets.MACOS_CERTIFICATE_NAME }}" ./output/LunarMP
+          else
+            # 如果没有配置证书，跳过签名
+            echo "没有配置代码签名证书，跳过签名步骤"
+            # 确认文件存在和可执行
+            chmod +x ./output/LunarMP
+          fi
+
   build-macos-arm64:
     name: Build MacOS Packages (ARM64)
     runs-on: macos-13
