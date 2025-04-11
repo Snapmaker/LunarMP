@@ -26,44 +26,36 @@ jobs:
           git submodule init
           git submodule update
 
-      # 添加GMP下载修复 - 放在构建前
+      # 安装特定版本的Boost（使用1.71版本与CGAL兼容）
+      - name: Install compatible Boost version
+        run: |
+          brew uninstall boost || true
+          brew install boost@1.71
+          echo 'export PATH="/usr/local/opt/boost@1.71/bin:$PATH"' >> ~/.bash_profile
+          echo 'export LDFLAGS="-L/usr/local/opt/boost@1.71/lib"' >> ~/.bash_profile
+          echo 'export CPPFLAGS="-I/usr/local/opt/boost@1.71/include"' >> ~/.bash_profile
+          export PATH="/usr/local/opt/boost@1.71/bin:$PATH"
+          export LDFLAGS="-L/usr/local/opt/boost@1.71/lib"
+          export CPPFLAGS="-I/usr/local/opt/boost@1.71/include"
+          brew info boost@1.71
+
+      # 添加GMP下载修复
       - name: Fix GMP Download URL
         run: |
-          # 修改下载脚本，使用镜像站点
           sed -i.bak 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
-          
-          # 预先下载GMP
           mkdir -p deps/download
           curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
-
-      # 添加Boost兼容性修复
-      - name: Fix Boost API compatibility
-        run: |
-          # 创建修复脚本
-          cat > fix_boost_prior.sh << 'EOF'
-          #!/bin/bash
-          # 查找所有包含boost::prior的文件并替换为std::prev
-          find ./deps -type f -name "*.h" -o -name "*.cpp" | xargs grep -l "boost::prior" | xargs sed -i.bak 's/boost::prior/std::prev/g'
-          EOF
-          
-          chmod +x fix_boost_prior.sh
-          ./fix_boost_prior.sh
 
       - name: install deps
         run: |
           brew install mpfr
-          brew install boost
+          # 不要安装默认boost（已经安装特定版本）
           brew install eigen
-#          brew install cgal
-#      - run: mkdir build && cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" -S ./ -B build
-#      - run: cmake --build ./build --target LunarMP -- -j 4
+
       - run: |
           /bin/bash sh/cmake-deps.sh
           /bin/bash sh/cmake-build.sh
-      #      - name: build for deps
-      #        run: sh sh/cmake-deps.sh
-      #      - name: build for LunarMP
-      #        run: sh sh/cmake-build.sh
+
       - run: ./build/LunarMP version && ./build/LunarMP ptest
       - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
@@ -114,10 +106,23 @@ jobs:
           git submodule init
           git submodule update
 
+      # 安装特定版本的Boost（使用1.71版本与CGAL兼容）
+      - name: Install compatible Boost version
+        run: |
+          brew uninstall boost || true
+          brew install boost@1.71
+          echo 'export PATH="/usr/local/opt/boost@1.71/bin:$PATH"' >> ~/.bash_profile
+          echo 'export LDFLAGS="-L/usr/local/opt/boost@1.71/lib"' >> ~/.bash_profile
+          echo 'export CPPFLAGS="-I/usr/local/opt/boost@1.71/include"' >> ~/.bash_profile
+          export PATH="/usr/local/opt/boost@1.71/bin:$PATH"
+          export LDFLAGS="-L/usr/local/opt/boost@1.71/lib"
+          export CPPFLAGS="-I/usr/local/opt/boost@1.71/include"
+          brew info boost@1.71
+
       - name: install deps
         run: |
           brew install mpfr
-          brew install boost
+          # 不要安装默认boost（已经安装特定版本）
           brew install eigen
 
       - run: |
@@ -151,19 +156,6 @@ jobs:
         with:
           files: LunarMP-mac-arm64.zip
 
-      # 添加Boost兼容性修复
-      - name: Fix Boost API compatibility
-        run: |
-          # 创建修复脚本
-          cat > fix_boost_prior.sh << 'EOF'
-          #!/bin/bash
-          # 查找所有包含boost::prior的文件并替换为std::prev
-          find ./deps -type f -name "*.h" -o -name "*.cpp" | xargs grep -l "boost::prior" | xargs sed -i.bak 's/boost::prior/std::prev/g'
-          EOF
-          
-          chmod +x fix_boost_prior.sh
-          ./fix_boost_prior.sh
-
       - name: 应用CGAL补丁
         run: |
           chmod +x patch-cgal.sh
@@ -186,6 +178,11 @@ jobs:
         run: |
           git submodule init
           git submodule update
+
+      # 安装特定版本的Boost
+      - name: Install compatible Boost version
+        run: |
+          choco install boost-msvc-14.2 --version=1.71.0 --allow-downgrade
 
       # 添加GMP下载修复
       - name: Fix GMP Download URL
@@ -270,20 +267,6 @@ jobs:
         with:
           files: ./LunarMP-win64.zip
 
-      # 添加Boost兼容性修复
-      - name: Fix Boost API compatibility
-        shell: bash
-        run: |
-          # 创建修复脚本
-          cat > fix_boost_prior.sh << 'EOF'
-          #!/bin/bash
-          # 查找所有包含boost::prior的文件并替换为std::prev
-          find ./deps -type f -name "*.h" -o -name "*.cpp" | xargs grep -l "boost::prior" | xargs sed -i 's/boost::prior/std::prev/g'
-          EOF
-          
-          chmod +x fix_boost_prior.sh
-          ./fix_boost_prior.sh
-
       - name: 应用CGAL补丁
         run: |
           chmod +x patch-cgal.sh
@@ -313,7 +296,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgmp-dev
           sudo apt-get install -y libmpfr-dev
-          sudo apt-get install -y libboost-all-dev
+          # 安装特定版本的Boost
+          sudo apt-get install -y libboost1.71-all-dev
           sudo apt-get install -y libeigen3-dev
           
       - run: |
@@ -350,19 +334,6 @@ jobs:
           # 预先下载GMP
           mkdir -p deps/download
           curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
-
-      # 添加Boost兼容性修复
-      - name: Fix Boost API compatibility
-        run: |
-          # 创建修复脚本
-          cat > fix_boost_prior.sh << 'EOF'
-          #!/bin/bash
-          # 查找所有包含boost::prior的文件并替换为std::prev
-          find ./deps -type f -name "*.h" -o -name "*.cpp" | xargs grep -l "boost::prior" | xargs sed -i 's/boost::prior/std::prev/g'
-          EOF
-          
-          chmod +x fix_boost_prior.sh
-          ./fix_boost_prior.sh
 
       - name: 应用CGAL补丁
         run: |
