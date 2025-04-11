@@ -7,72 +7,14 @@ on:
 #on: push
 
 jobs:
-  build-boost:
-    name: Build Boost 1.76.0
-    runs-on: macos-latest
-    steps:
-      - name: Build Boost 1.76.0 from source
-        run: |
-          # 创建临时目录
-          mkdir -p /tmp/boost_src
-          cd /tmp/boost_src
-          
-          # 下载Boost 1.76.0源码
-          curl -L https://sourceforge.net/projects/boost/files/boost/1.76.0/boost_1_76_0.tar.gz/download -o boost_1_76_0.tar.gz
-          tar -xzf boost_1_76_0.tar.gz
-          
-          # 编辑project-config.jam以添加兼容性标志
-          cd boost_1_76_0
-          echo 'using clang : : : <cxxflags>"-DBOOST_BIND_GLOBAL_PLACEHOLDERS -DBOOST_NO_CXX98_FUNCTION_BASE -std=c++14 -Wno-deprecated-declarations -Wno-deprecated-builtins" ;' >> project-config.jam
-          
-          # 应用补丁解决piecewise_construct问题
-          cat > piecewise_patch.hpp << 'EOF'
-          // 兼容性补丁文件
-          #ifndef BOOST_COMPAT_PIECEWISE_PATCH_HPP
-          #define BOOST_COMPAT_PIECEWISE_PATCH_HPP
-          
-          namespace std {
-            constexpr struct piecewise_construct_t { } piecewise_construct = piecewise_construct_t();
-          }
-          
-          #endif
-          EOF
-          
-          # 将补丁文件复制到Boost头文件目录
-          cp piecewise_patch.hpp boost/unordered/detail/
-          
-          # 修改fwd.hpp文件
-          sed -i.bak 's|using std::piecewise_construct;|#include <boost/unordered/detail/piecewise_patch.hpp>|' boost/unordered/detail/fwd.hpp
-          
-          # 编译和安装Boost
-          ./bootstrap.sh --prefix=/tmp/boost_install
-          ./b2 --with-graph --prefix=/tmp/boost_install -j$(sysctl -n hw.ncpu) cxxflags="-DBOOST_BIND_GLOBAL_PLACEHOLDERS -std=c++14 -Wno-deprecated-declarations -Wno-deprecated-builtins" install
-          
-          # 设置环境变量
-          echo "BOOST_ROOT=/tmp/boost_install" >> $GITHUB_ENV
-          echo "CMAKE_PREFIX_PATH=/tmp/boost_install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
-          echo "BOOST_INCLUDEDIR=/tmp/boost_install/include" >> $GITHUB_ENV
-          echo "BOOST_LIBRARYDIR=/tmp/boost_install/lib" >> $GITHUB_ENV
-          
-      # 上传Boost构建产物
-      - name: Upload Boost artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: boost-1.76-build
-          path: /tmp/boost_install
-
   build-macos:
-    needs: [build-boost]  # 设置依赖关系
     name: Build MacOS Packages (Intel)
-
-    # 使用旧版本的macOS以获取兼容的Homebrew
-    runs-on: macos-12
+    runs-on: macos-12  # 使用较稳定的macOS版本
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # 移除submodules参数，改为手动处理
           fetch-depth: 1
 
       # 手动初始化和更新子模块
@@ -81,123 +23,10 @@ jobs:
           git submodule init
           git submodule update
 
-      # 安装当前可用的最新版本Boost
+      # 安装Boost及创建兼容层
       - name: Install Boost
         run: |
-          brew install boost
-          # 创建兼容层
-          mkdir -p /tmp/boost_compat/boost
-          cat > /tmp/boost_compat/boost/next_prior.hpp << 'EOF'
-          #ifndef BOOST_NEXT_PRIOR_HPP_INCLUDED
-          #define BOOST_NEXT_PRIOR_HPP_INCLUDED
-          
-          #include <iterator>
-          
-          namespace boost {
-              template <class T>
-              inline T prior(T x) { return --x; }
-          
-              template <class T, class Distance>
-              inline T prior(T x, Distance n) {
-                  std::advance(x, -n);
-                  return x;
-              }
-          
-              template <class T>
-              inline T next(T x) { return ++x; }
-          
-              template <class T, class Distance>
-              inline T next(T x, Distance n) {
-                  std::advance(x, n);
-                  return x;
-              }
-          }
-          
-          #endif // BOOST_NEXT_PRIOR_HPP_INCLUDED
-          EOF
-          
-          # 确保构建时包含兼容层
-          echo "CPPFLAGS=-I/tmp/boost_compat" >> $GITHUB_ENV
-
-      # 添加GMP下载修复
-      - name: Fix GMP Download URL
-        run: |
-          sed -i.bak 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
-          mkdir -p deps/download
-          curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
-
-      - name: install deps
-        run: |
-          brew install mpfr
-          # 不要安装默认boost（已经安装特定版本）
-          brew install eigen
-
-      - run: |
-          /bin/bash sh/cmake-deps.sh
-          /bin/bash sh/cmake-build.sh
-
-      - run: ./build/LunarMP version && ./build/LunarMP ptest
-      - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
-
-      - name: import apple code-signing
-        uses: apple-actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
-          p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
-
-      - run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
-
-      - name: Zip output
-        uses: thedoctor0/zip-release@master
-        with:
-          type: zip
-          filename: LunarMP-mac.zip
-          directory: ./
-          path: ./output
-
-      - name: Upload Release Asset - MacOS Intel Binary file
-        id: upload-release-asset-macos-intel-binary
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: LunarMP-mac.zip
-
-      - name: 应用CGAL补丁
-        run: |
-          chmod +x patch-cgal.sh
-          ./patch-cgal.sh
-
-      # 下载Boost构建产物
-      - name: Download Boost artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: boost-1.76-build
-          path: /tmp/boost_install
-
-  build-macos-arm64:
-    needs: [build-boost]  # 添加依赖
-    name: Build MacOS Packages (ARM64)
-
-    runs-on: macos-13  # 使用macos-13而不是macos-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          # 移除submodules参数，改为手动处理
-          fetch-depth: 1
-      
-      # 手动初始化和更新子模块
-      - name: Fetch submodules
-        run: |
-          git submodule init
-          git submodule update
-
-      # 安装当前可用的最新版本Boost
-      - name: Install Boost 1.71
-        run: |
-          # 尝试安装Boost 1.71，这个版本与CGAL兼容性好
+          # 尝试按优先级安装Boost
           brew install boost@1.71 || brew install boost@1.72 || brew install boost@1.76 || brew install boost
           
           # 创建兼容层
@@ -234,72 +63,73 @@ jobs:
           # 确保构建时包含兼容层
           echo "CPPFLAGS=-I/tmp/boost_compat" >> $GITHUB_ENV
 
-      - name: install deps
+      # 修复GMP下载链接
+      - name: Fix GMP Download URL
         run: |
-          brew install mpfr
-          # 不要安装默认boost（已经安装特定版本）
-          brew install eigen
+          sed -i.bak 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
+          mkdir -p deps/download
+          curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
 
-      - run: |
+      # 安装其他依赖
+      - name: Install dependencies
+        run: |
+          brew install mpfr eigen
+
+      # 构建项目
+      - name: Build project
+        run: |
           /bin/bash sh/cmake-deps.sh
-          CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" /bin/bash sh/cmake-build.sh
-          
-      - run: ./build/LunarMP version && ./build/LunarMP ptest
-      - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
+          /bin/bash sh/cmake-build.sh
 
-      - name: import apple code-signing
+      # 测试
+      - name: Test
+        run: ./build/LunarMP version && ./build/LunarMP ptest
+      
+      # 准备输出
+      - name: Prepare output
+        run: mkdir output && cp ./build/LunarMP ./output/LunarMP
+
+      # 代码签名
+      - name: Code signing
         uses: apple-actions/import-codesign-certs@v1
         with:
           p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
           p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
 
-      - run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
+      - name: Sign binary
+        run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
 
+      # 打包
       - name: Zip output
         uses: thedoctor0/zip-release@master
         with:
           type: zip
-          filename: LunarMP-mac-arm64.zip
+          filename: LunarMP-mac.zip
           directory: ./
           path: ./output
 
-      - name: Upload Release Asset - MacOS ARM64 Binary file
-        id: upload-release-asset-macos-arm64-binary
+      # 上传
+      - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: LunarMP-mac-arm64.zip
+          files: LunarMP-mac.zip
 
-      - name: 应用CGAL补丁
+      # 应用CGAL补丁
+      - name: Apply CGAL patch
         run: |
           chmod +x patch-cgal.sh
           ./patch-cgal.sh
 
-      # 添加下载Boost构建产物的步骤
-      - name: Download Boost artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: boost-1.76-build
-          path: /tmp/boost_install
-        
-      # 设置Boost环境变量
-      - name: Setup Boost environment
-        run: |
-          echo "BOOST_ROOT=/tmp/boost_install" >> $GITHUB_ENV
-          echo "CMAKE_PREFIX_PATH=/tmp/boost_install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
-          echo "BOOST_INCLUDEDIR=/tmp/boost_install/include" >> $GITHUB_ENV
-          echo "BOOST_LIBRARYDIR=/tmp/boost_install/lib" >> $GITHUB_ENV
-
-  build_macos_boost_1_76:
-    name: Build MacOS Packages (Boost 1.76)
-    runs-on: macos-latest
+  build-macos-arm64:
+    name: Build MacOS Packages (ARM64)
+    runs-on: macos-13  # 使用macos-13支持ARM64架构
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # 移除submodules参数，改为手动处理
           fetch-depth: 1
       
       # 手动初始化和更新子模块
@@ -308,63 +138,200 @@ jobs:
           git submodule init
           git submodule update
 
-      # 安装Boost 1.76
-      - name: Install Boost 1.76.0 from source
+      # 安装Boost及创建兼容层
+      - name: Install Boost
         run: |
-          # 创建临时目录
-          mkdir -p /tmp/boost_src
-          cd /tmp/boost_src
+          # 尝试按优先级安装Boost
+          brew install boost@1.71 || brew install boost@1.72 || brew install boost@1.76 || brew install boost
           
-          # 使用SourceForge镜像下载Boost 1.76.0源码
-          curl -L https://sourceforge.net/projects/boost/files/boost/1.76.0/boost_1_76_0.tar.gz/download -o boost_1_76_0.tar.gz
-          tar -xzf boost_1_76_0.tar.gz
+          # 创建兼容层
+          mkdir -p /tmp/boost_compat/boost
+          cat > /tmp/boost_compat/boost/next_prior.hpp << 'EOF'
+          #ifndef BOOST_NEXT_PRIOR_HPP_INCLUDED
+          #define BOOST_NEXT_PRIOR_HPP_INCLUDED
           
-          # 如果上面的链接失败，尝试GitHub镜像
-          if [ ! -d "boost_1_76_0" ]; then
-            echo "尝试备用下载源..."
-            curl -L https://github.com/boostorg/boost/releases/download/boost-1.76.0/boost-1.76.0.tar.gz -o boost_1_76_0.tar.gz
-            tar -xzf boost_1_76_0.tar.gz
-          fi
+          #include <iterator>
           
-          # 如果仍然失败，尝试Debian镜像
-          if [ ! -d "boost_1_76_0" ]; then
-            echo "尝试Debian镜像..."
-            curl -L http://archive.debian.org/debian/pool/main/b/boost1.76/boost1.76_1.76.0.orig.tar.gz -o boost_1_76_0.tar.gz
-            tar -xzf boost_1_76_0.tar.gz
-          fi
+          namespace boost {
+              template <class T>
+              inline T prior(T x) { return --x; }
           
-          # 编译和安装(只构建graph库，这是我们需要的)
-          cd boost_1_76_0 || cd boost-1.76.0 || cd boost-1.76.0
-          ./bootstrap.sh --prefix=/tmp/boost_install
-          ./b2 --with-graph --prefix=/tmp/boost_install -j$(sysctl -n hw.ncpu) install
+              template <class T, class Distance>
+              inline T prior(T x, Distance n) {
+                  std::advance(x, -n);
+                  return x;
+              }
           
-          # 设置环境变量
-          echo "BOOST_ROOT=/tmp/boost_install" >> $GITHUB_ENV
-          echo "CMAKE_PREFIX_PATH=/tmp/boost_install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
-          echo "BOOST_INCLUDEDIR=/tmp/boost_install/include" >> $GITHUB_ENV
-          echo "BOOST_LIBRARYDIR=/tmp/boost_install/lib" >> $GITHUB_ENV
+              template <class T>
+              inline T next(T x) { return ++x; }
+          
+              template <class T, class Distance>
+              inline T next(T x, Distance n) {
+                  std::advance(x, n);
+                  return x;
+              }
+          }
+          
+          #endif // BOOST_NEXT_PRIOR_HPP_INCLUDED
+          EOF
+          
+          # 确保构建时包含兼容层
+          echo "CPPFLAGS=-I/tmp/boost_compat" >> $GITHUB_ENV
 
-      - name: install deps
+      # 修复GMP下载链接
+      - name: Fix GMP Download URL
         run: |
-          brew install mpfr
-          # 不要安装默认boost（已经安装特定版本）
-          brew install eigen
+          sed -i.bak 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
+          mkdir -p deps/download
+          curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
 
-      - run: |
+      # 安装其他依赖
+      - name: Install dependencies
+        run: |
+          brew install mpfr eigen
+
+      # 构建项目
+      - name: Build project
+        run: |
           /bin/bash sh/cmake-deps.sh
           /bin/bash sh/cmake-build.sh
 
-      - run: ./build/LunarMP version && ./build/LunarMP ptest
-      - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
+      # 测试
+      - name: Test
+        run: ./build/LunarMP version && ./build/LunarMP ptest
+      
+      # 准备输出
+      - name: Prepare output
+        run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
-      - name: import apple code-signing
+      # 代码签名
+      - name: Code signing
         uses: apple-actions/import-codesign-certs@v1
         with:
           p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
           p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
 
-      - run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
+      - name: Sign binary
+        run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
 
+      # 打包
+      - name: Zip output
+        uses: thedoctor0/zip-release@master
+        with:
+          type: zip
+          filename: LunarMP-mac-arm64.zip
+          directory: ./
+          path: ./output
+
+      # 上传
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: LunarMP-mac-arm64.zip
+
+      # 应用CGAL补丁
+      - name: Apply CGAL patch
+        run: |
+          chmod +x patch-cgal.sh
+          ./patch-cgal.sh
+
+  build_macos_boost_1_76:
+    name: Build MacOS Packages (Boost 1.76)
+    runs-on: macos-12  # 使用较稳定的macOS版本
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      # 手动初始化和更新子模块
+      - name: Fetch submodules
+        run: |
+          git submodule init
+          git submodule update
+
+      # 安装Boost及创建兼容层
+      - name: Install Boost 1.76
+        run: |
+          # 尝试安装Boost 1.76
+          brew install boost@1.76 || brew install boost
+          
+          # 创建兼容层
+          mkdir -p /tmp/boost_compat/boost
+          cat > /tmp/boost_compat/boost/next_prior.hpp << 'EOF'
+          #ifndef BOOST_NEXT_PRIOR_HPP_INCLUDED
+          #define BOOST_NEXT_PRIOR_HPP_INCLUDED
+          
+          #include <iterator>
+          
+          namespace boost {
+              template <class T>
+              inline T prior(T x) { return --x; }
+          
+              template <class T, class Distance>
+              inline T prior(T x, Distance n) {
+                  std::advance(x, -n);
+                  return x;
+              }
+          
+              template <class T>
+              inline T next(T x) { return ++x; }
+          
+              template <class T, class Distance>
+              inline T next(T x, Distance n) {
+                  std::advance(x, n);
+                  return x;
+              }
+          }
+          
+          #endif // BOOST_NEXT_PRIOR_HPP_INCLUDED
+          EOF
+          
+          # 确保构建时包含兼容层
+          echo "CPPFLAGS=-I/tmp/boost_compat" >> $GITHUB_ENV
+          # 设置Boost版本标记以在CMake中优先查找1.76
+          echo "BOOST_ROOT=$(brew --prefix)/opt/boost@1.76" >> $GITHUB_ENV
+
+      # 修复GMP下载链接
+      - name: Fix GMP Download URL
+        run: |
+          sed -i.bak 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
+          mkdir -p deps/download
+          curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
+
+      # 安装其他依赖
+      - name: Install dependencies
+        run: |
+          brew install mpfr eigen
+
+      # 构建项目
+      - name: Build project
+        run: |
+          /bin/bash sh/cmake-deps.sh
+          /bin/bash sh/cmake-build.sh
+
+      # 测试
+      - name: Test
+        run: ./build/LunarMP version && ./build/LunarMP ptest
+      
+      # 准备输出
+      - name: Prepare output
+        run: mkdir output && cp ./build/LunarMP ./output/LunarMP
+
+      # 代码签名
+      - name: Code signing
+        uses: apple-actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
+          p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
+
+      - name: Sign binary
+        run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
+
+      # 打包
       - name: Zip output
         uses: thedoctor0/zip-release@master
         with:
@@ -373,15 +340,16 @@ jobs:
           directory: ./
           path: ./output
 
-      - name: Upload Release Asset - MacOS Boost 1.76 Binary file
-        id: upload_release_asset_macos_boost_1_76_binary
+      # 上传
+      - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: LunarMP-mac-boost-1.76.zip
 
-      - name: 应用CGAL补丁
+      # 应用CGAL补丁
+      - name: Apply CGAL patch
         run: |
           chmod +x patch-cgal.sh
           ./patch-cgal.sh
@@ -390,8 +358,8 @@ jobs:
     name: Build Windows packages
     runs-on: windows-latest
     env:
-      # 允许使用不安全的命令，解决add-path和set-env问题
       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -409,17 +377,15 @@ jobs:
         run: |
           choco install boost-msvc-14.2 --version=1.71.0 --allow-downgrade
 
-      # 添加GMP下载修复
+      # 修复GMP下载链接
       - name: Fix GMP Download URL
         shell: bash
         run: |
-          # 修改下载脚本，使用镜像站点
           sed -i 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
-          
-          # 预先下载GMP
           mkdir -p deps/download
           curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
 
+      # 设置MSYS2
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
         with:
@@ -443,39 +409,22 @@ jobs:
           pacman -Syu --noconfirm
           pacman -S --noconfirm --needed m4 gmp mpfr mingw-w64-x86_64-eigen3 mingw-w64-x86_64-boost
 
-      - shell: msys2 {0}
+      # 构建项目
+      - name: Build project
+        shell: msys2 {0}
         run: |
           sh sh/cmake-deps.sh
           sh sh/cmake-build.sh
-      #          cd deps && mkdir build
-      #          cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - MinGW Makefiles" -S ./ -B build
-      #          cmake --build ./build --target GMP -- -j 12
-      #          sh sh/cmake-build.sh
-      #          $env:PATH+=";C:\msys64\usr\bin\"
-      #          sh sh/cmake-deps.sh
-      #          $env:PATH
-      #          $env:PATH -split"
-      #          $env:PATH -split"
-      #          gcc -v
-      #          cmake --help
-      #          m4 --help
-      #          ls C:\msys64\usr\bin\
-      #            mingw-w64-boost
-      #            mingw-w64-eigen3
-      #            mingw-w64-cgal
-      #            mingw-w64-x86_64-gcc
-      #            mingw-w64-x86_64-cmake
-      #            mingw-w64-x86_64-make
-      #            mingw-w64-x86_64-libjpeg-turbo
-      #            mingw-w64-x86_64-libpng
-      #            mingw-w64-x86_64-boost
-      #      - name: build for deps
-      #        run: sh sh/cmake-deps.sh
-      #      - name: build for LunarMP
-      #        run: sh sh/cmake-build.sh
-      - run: ./build/LunarMP.exe version && ./build/LunarMP.exe ptest
-      - run: mkdir output && cp ./build/LunarMP.exe ./output/LunarMP.exe
+
+      # 测试
+      - name: Test
+        run: ./build/LunarMP.exe version && ./build/LunarMP.exe ptest
       
+      # 准备输出
+      - name: Prepare output
+        run: mkdir output && cp ./build/LunarMP.exe ./output/LunarMP.exe
+
+      # 打包
       - name: Zip output
         uses: thedoctor0/zip-release@master
         with:
@@ -484,30 +433,28 @@ jobs:
           directory: ./
           path: ./output
 
-      - name: Upload Release Asset - Windows x64 Binary file
-        id: upload-release-asset-win-x64-binary
+      # 上传
+      - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: ./LunarMP-win64.zip
 
-      - name: 应用CGAL补丁
+      # 应用CGAL补丁
+      - name: Apply CGAL patch
         run: |
           chmod +x patch-cgal.sh
           ./patch-cgal.sh
 
   build-ubuntu:
     name: Build Ubuntu packages
-
-    # 更新Ubuntu环境
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # 移除submodules参数，改为手动处理
           fetch-depth: 1
       
       # 手动初始化和更新子模块
@@ -516,6 +463,7 @@ jobs:
           git submodule init
           git submodule update
 
+      # 安装依赖
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -524,16 +472,29 @@ jobs:
           # 安装特定版本的Boost
           sudo apt-get install -y libboost1.71-all-dev
           sudo apt-get install -y libeigen3-dev
+
+      # 修复GMP下载链接
+      - name: Fix GMP Download URL
+        run: |
+          sed -i 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
+          mkdir -p deps/download
+          curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
           
-      - run: |
+      # 构建项目
+      - name: Build project
+        run: |
           /bin/bash sh/cmake-deps.sh
           /bin/bash sh/cmake-build.sh
 
-      #      - run: mkdir build && cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" -S ./ -B build
-      #      - run: cmake --build ./build --target LunarMP -- -j 4
-      - run: ./build/LunarMP version && ./build/LunarMP ptest
-      - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
+      # 测试
+      - name: Test
+        run: ./build/LunarMP version && ./build/LunarMP ptest
+      
+      # 准备输出
+      - name: Prepare output
+        run: mkdir output && cp ./build/LunarMP ./output/LunarMP
 
+      # 打包
       - name: Zip output
         uses: thedoctor0/zip-release@master
         with:
@@ -542,25 +503,16 @@ jobs:
           directory: ./
           path: ./output
 
-      - name: Upload Release Asset - Linux Binary file
-        id: upload-release-asset-linux-binary
+      # 上传
+      - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: LunarMP-linux.zip
 
-      # 添加GMP下载修复（位于正确位置）
-      - name: Fix GMP Download URL
-        run: |
-          # 修改下载脚本，使用镜像站点
-          sed -i 's|https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2|https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2|g' sh/cmake-deps.sh
-          
-          # 预先下载GMP
-          mkdir -p deps/download
-          curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
-
-      - name: 应用CGAL补丁
+      # 应用CGAL补丁
+      - name: Apply CGAL patch
         run: |
           chmod +x patch-cgal.sh
           ./patch-cgal.sh
