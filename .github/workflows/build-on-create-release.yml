@@ -85,7 +85,22 @@ jobs:
       - name: Build project
         run: |
           /bin/bash sh/cmake-deps.sh
-          /bin/bash sh/cmake-build.sh
+          
+          # 应用直接修复
+          chmod +x create-compat-layer.sh
+          ./create-compat-layer.sh
+          
+          # 直接修复已知问题文件
+          PROBLEM_FILE="./deps/build/install/usr/local/include/CGAL/Intersections_3/internal/Plane_3_Triangle_3_intersection.h"
+          if [ -f "$PROBLEM_FILE" ]; then
+            echo "修复已知问题文件..."
+            sed -i.bak '1s/^/#include <boost\/next_prior.hpp>\n/' "$PROBLEM_FILE"
+            # 备用方案：直接替换boost::prior为std::prev
+            sed -i.bak2 's/boost::prior/std::prev/g' "$PROBLEM_FILE"
+          fi
+          
+          # 使用修改后的环境变量构建
+          CPPFLAGS="-I$(pwd)/boost_compat" /bin/bash sh/cmake-build.sh
 
       # 测试
       - name: Test
@@ -121,6 +136,28 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: LunarMP-mac.zip
+
+      # 在macOS构建中添加这个直接修复步骤
+      - name: Direct fix for boost::prior error
+        run: |
+          # 创建兼容层
+          chmod +x create-compat-layer.sh
+          ./create-compat-layer.sh
+          
+          # 等待deps目录生成后直接修复问题文件
+          while [ ! -f ./deps/build/install/usr/local/include/CGAL/Intersections_3/internal/Plane_3_Triangle_3_intersection.h ]; do
+            echo "等待CGAL文件生成..."
+            sleep 5
+          done
+          
+          echo "修复问题文件..."
+          PROBLEM_FILE="./deps/build/install/usr/local/include/CGAL/Intersections_3/internal/Plane_3_Triangle_3_intersection.h"
+          
+          # 在文件开头添加我们的兼容层
+          sed -i.bak '1s/^/#include <boost\/next_prior.hpp>\n/' "$PROBLEM_FILE"
+          
+          # 确保项目能找到兼容层
+          echo "CPPFLAGS=-I$(pwd)/boost_compat" >> $GITHUB_ENV
 
   build-macos-arm64:
     name: Build MacOS Packages (ARM64)
