@@ -7,7 +7,21 @@ on:
 #on: push
 
 jobs:
+  build-boost:
+    name: Build Boost 1.76.0
+    runs-on: macos-latest
+    steps:
+      # 构建Boost
+      # ...
+      # 上传Boost构建产物
+      - name: Upload Boost artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: boost-1.76-build
+          path: /tmp/boost_install
+
   build-macos:
+    needs: [build-boost]  # 设置依赖关系
     name: Build MacOS Packages (Intel)
 
     # 使用旧版本的macOS以获取兼容的Homebrew
@@ -113,6 +127,13 @@ jobs:
           chmod +x patch-cgal.sh
           ./patch-cgal.sh
 
+      # 下载Boost构建产物
+      - name: Download Boost artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: boost-1.76-build
+          path: /tmp/boost_install
+
   build-macos-arm64:
     name: Build MacOS Packages (ARM64)
 
@@ -205,6 +226,87 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: LunarMP-mac-arm64.zip
+
+      - name: 应用CGAL补丁
+        run: |
+          chmod +x patch-cgal.sh
+          ./patch-cgal.sh
+
+  build_macos_boost_1_76:
+    name: Build MacOS Packages (Boost 1.76)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # 移除submodules参数，改为手动处理
+          fetch-depth: 1
+      
+      # 手动初始化和更新子模块
+      - name: Fetch submodules
+        run: |
+          git submodule init
+          git submodule update
+
+      # 安装Boost 1.76
+      - name: Install Boost 1.76.0 from source
+        run: |
+          # 创建临时目录
+          mkdir -p /tmp/boost_src
+          cd /tmp/boost_src
+          
+          # 下载Boost 1.76.0源码
+          curl -L https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz -o boost_1_76_0.tar.gz
+          tar -xzf boost_1_76_0.tar.gz
+          
+          # 编译和安装(只构建graph库，这是我们需要的)
+          cd boost_1_76_0
+          ./bootstrap.sh --prefix=/tmp/boost_install
+          ./b2 --with-graph --prefix=/tmp/boost_install -j$(sysctl -n hw.ncpu) install
+          
+          # 设置环境变量
+          echo "BOOST_ROOT=/tmp/boost_install" >> $GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=/tmp/boost_install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
+          echo "BOOST_INCLUDEDIR=/tmp/boost_install/include" >> $GITHUB_ENV
+          echo "BOOST_LIBRARYDIR=/tmp/boost_install/lib" >> $GITHUB_ENV
+
+      - name: install deps
+        run: |
+          brew install mpfr
+          # 不要安装默认boost（已经安装特定版本）
+          brew install eigen
+
+      - run: |
+          /bin/bash sh/cmake-deps.sh
+          /bin/bash sh/cmake-build.sh
+
+      - run: ./build/LunarMP version && ./build/LunarMP ptest
+      - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
+
+      - name: import apple code-signing
+        uses: apple-actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
+          p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
+
+      - run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
+
+      - name: Zip output
+        uses: thedoctor0/zip-release@master
+        with:
+          type: zip
+          filename: LunarMP-mac-boost-1.76.zip
+          directory: ./
+          path: ./output
+
+      - name: Upload Release Asset - MacOS Boost 1.76 Binary file
+        id: upload_release_asset_macos_boost_1_76_binary
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: LunarMP-mac-boost-1.76.zip
 
       - name: 应用CGAL补丁
         run: |
@@ -384,88 +486,6 @@ jobs:
           # 预先下载GMP
           mkdir -p deps/download
           curl -L -o deps/download/gmp-6.2.1.tar.bz2 https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2 || true
-
-      - name: 应用CGAL补丁
-        run: |
-          chmod +x patch-cgal.sh
-          ./patch-cgal.sh
-
-  build-macos-boost-1.76:
-    name: Build MacOS Packages (Boost 1.76)
-
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          # 移除submodules参数，改为手动处理
-          fetch-depth: 1
-      
-      # 手动初始化和更新子模块
-      - name: Fetch submodules
-        run: |
-          git submodule init
-          git submodule update
-
-      # 安装Boost 1.76
-      - name: Install Boost 1.76.0 from source
-        run: |
-          # 创建临时目录
-          mkdir -p /tmp/boost_src
-          cd /tmp/boost_src
-          
-          # 下载Boost 1.76.0源码
-          curl -L https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz -o boost_1_76_0.tar.gz
-          tar -xzf boost_1_76_0.tar.gz
-          
-          # 编译和安装(只构建graph库，这是我们需要的)
-          cd boost_1_76_0
-          ./bootstrap.sh --prefix=/tmp/boost_install
-          ./b2 --with-graph --prefix=/tmp/boost_install -j$(sysctl -n hw.ncpu) install
-          
-          # 设置环境变量
-          echo "BOOST_ROOT=/tmp/boost_install" >> $GITHUB_ENV
-          echo "CMAKE_PREFIX_PATH=/tmp/boost_install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
-          echo "BOOST_INCLUDEDIR=/tmp/boost_install/include" >> $GITHUB_ENV
-          echo "BOOST_LIBRARYDIR=/tmp/boost_install/lib" >> $GITHUB_ENV
-
-      - name: install deps
-        run: |
-          brew install mpfr
-          # 不要安装默认boost（已经安装特定版本）
-          brew install eigen
-
-      - run: |
-          /bin/bash sh/cmake-deps.sh
-          /bin/bash sh/cmake-build.sh
-
-      - run: ./build/LunarMP version && ./build/LunarMP ptest
-      - run: mkdir output && cp ./build/LunarMP ./output/LunarMP
-
-      - name: import apple code-signing
-        uses: apple-actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
-          p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
-
-      - run: codesign -s ${{ secrets.CERTIFICATES_NAME }} ./output/LunarMP
-
-      - name: Zip output
-        uses: thedoctor0/zip-release@master
-        with:
-          type: zip
-          filename: LunarMP-mac-boost-1.76.zip
-          directory: ./
-          path: ./output
-
-      - name: Upload Release Asset - MacOS Boost 1.76 Binary file
-        id: upload-release-asset-macos-boost-1.76-binary
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: LunarMP-mac-boost-1.76.zip
 
       - name: 应用CGAL补丁
         run: |
