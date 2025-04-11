@@ -54,6 +54,9 @@ target_link_libraries(_LunarMP PUBLIC CGAL::CGAL)
 
 target_include_directories(_LunarMP PUBLIC src/rapidjson)
 
+# 添加包含路径，确保我们的兼容性头文件优先级高于CGAL
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 add_executable(LunarMP src/lunarmp/main.cpp)
 
 target_link_libraries(LunarMP _LunarMP)

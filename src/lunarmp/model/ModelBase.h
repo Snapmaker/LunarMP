@@ -12,6 +12,7 @@
 
 #include "../utils/logoutput.h"
 #include "../utils/Enums.h"
+#include "../utils/BoostCompat.h"
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel                 K;
 typedef K::Point_3                                                          Point_3;
